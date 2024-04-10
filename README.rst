@@ -18,7 +18,7 @@ galitime
 Introduction
 ------------
 
-Software for benchmarking programs using [GNU Time](https://www.gnu.org/software/time/).
+Software for benchmarking programs using `GNU Time <https://www.gnu.org/software/time/>`_.
 
 
 
@@ -29,7 +29,7 @@ Quick example
 
     # brew install gnu-time # on OS X
     conda install -y -c bioconda -c conda-forge galitime
-    galitime --log time.log  ls
+    galitime --log time.log ls
 
 
 
@@ -40,8 +40,8 @@ Dependencies
 ~~~~~~~~~~~~
 
 Galitime has no dependencies beyond Python 3. However, on OS X
-it requires the GNU version of the `time` command (`gtime`),
-which can be installed by `brew install gnu-time`.
+it requires the GNU version of the :code:`time` command (:code:`gtime`),
+which can be installed by :code:`brew install gnu-time`.
 
 
 Using Bioconda
