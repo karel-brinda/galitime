@@ -7,12 +7,12 @@ galitime
     :target: https://github.com/karel-brinda/galitime/releases/
 .. |pypi-badge| image:: https://img.shields.io/pypi/v/galitime.svg
     :target: https://pypi.org/project/galitime/
-.. |doi-badge| image:: https://zenodo.org/badge/DOI/110.5281/zenodo.10945896.svg
-    :target: https://doi.org/10.5281/zenodo.10945896
+.. |zenodo-badge| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10953105.svg
+    :target: https://doi.org/10.5281/zenodo.10953105
 .. |ci-tests-badge| image:: https://github.com/karel-brinda/galitime/actions/workflows/ci.yml/badge.svg
     :target: https://github.com/karel-brinda/galitime/actions/
 
-|info-badge| |github-release-badge| |pypi-badge| |ci-tests-badge|
+|info-badge| |github-release-badge| |pypi-badge| |zenodo-badge| |ci-tests-badge|
 
 
 Introduction
