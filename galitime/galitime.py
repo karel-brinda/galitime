@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
-import sys
 import argparse
-from pathlib import Path
-import subprocess
+import collections
 import datetime
 import os
 import re
+import subprocess
+import sys
+import tempfile
+
+from pathlib import Path
 
 sys.path.append(os.path.dirname(__file__))
 import version
@@ -14,6 +17,8 @@ import version
 PROGRAM = 'galitime'
 VERSION = version.VERSION
 DESC = 'benchmarking of computational experiments using GNU time'
+
+DEFAULT_L = "stderr"
 
 
 def get_time_command():
@@ -35,7 +40,57 @@ def get_time_command():
     return time_command
 
 
-def run(log_file, experiment, command):
+def run_single_instance(command, experiment):
+
+    d = collections.OrderedDict()
+
+    # 1) experiment name (if user-specified)
+    if experiment:
+        d['experiment'] = experiment
+
+    # 2) GNU time measurements
+    header = [
+        "real(s)", "sys(s)", "user(s)", "percent_CPU", "max_RAM(kb)", "FS_inputs", "FS_outputs",
+        "elapsed_time_alt(s)"
+    ]
+
+    with tempfile.TemporaryDirectory() as dir_fn:
+        tmp_fn = os.path.join(dir_fn, "gtime_output.txt")
+        gtime_columns = (
+            "real_s", "sys_s", "user_s", "percent_cpu", "ram_kb", "fs_inputs", "fs_outputs"
+        )
+        gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%I\t%O"
+        benchmark_wrapper = f'{get_time_command()} -o {tmp_fn} -f "{gtime_columns_spec}"'
+
+        start_time = datetime.datetime.now()
+        main_process = subprocess.Popen(
+            f'{benchmark_wrapper} {command}', shell=True, executable='/bin/bash'
+        )
+        return_code = main_process.wait()
+        end_time = datetime.datetime.now()
+
+        if return_code:
+            raise subprocess.CalledProcessError(
+                return_code, main_process.args, output=main_process.stdout,
+                stderr=main_process.stderr
+            )
+
+        with open(tmp_fn) as tmp_fo:
+            gtime_output_values = tmp_fo.readline().strip().split("\t")
+
+    for k, v in zip(gtime_columns, gtime_output_values):
+        d[k] = v
+
+    # 3) elapsed time
+    d["python_real_s"] = str((end_time - start_time).total_seconds())
+
+    # 4) formatted command
+    d["command"] = " ".join(command.replace("\\\n", " ").strip().split())
+
+    return d
+
+
+def run(log_file, command, experiment):
     """
     Run a benchmarking command and log the results.
 
@@ -50,45 +105,18 @@ def run(log_file, experiment, command):
     Returns:
         None
     """
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-    tmp_log_file = Path(f"{log_file}.tmp")
+    d = run_single_instance(command, experiment)
 
-    with open(log_file, "w") as log_fh:
-        formatted_command = " ".join(command.replace("\\\n", " ").strip().split())
-        print(f"# Benchmarking command: {formatted_command}", file=log_fh)
-        header = [
-            "real(s)", "sys(s)", "user(s)", "percent_CPU", "max_RAM(kb)", "FS_inputs", "FS_outputs",
-            "elapsed_time_alt(s)"
-        ]
-        if experiment:
-            header = ['experiment'] + header
-        print("\t".join(header), file=log_fh)
+    output = "\t".join(d.keys()) + "\n" + "\t".join(d.values())
 
-    time_command = get_time_command()
-    benchmark_command = f'{time_command} -o {tmp_log_file} -f "%e\t%S\t%U\t%P\t%M\t%I\t%O"'
-
-    start_time = datetime.datetime.now()
-    main_process = subprocess.Popen(
-        f'{benchmark_command} {command}', shell=True, executable='/bin/bash'
-    )
-    return_code = main_process.wait()
-    if return_code:
-        raise subprocess.CalledProcessError(
-            return_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
-        )
-
-    end_time = datetime.datetime.now()
-    elapsed_seconds = (end_time - start_time).total_seconds()
-    with open(tmp_log_file) as log_fh_tmp, open(log_file, "a") as log_fh:
-        log_line = ""
-        if experiment:
-            log_line = experiment.replace("\t", " ").strip() + "\t"
-        log_line += log_fh_tmp.readline().strip()
-        log_line += f"\t{elapsed_seconds}"
-
-        print(log_line, file=log_fh)
-
-    tmp_log_file.unlink()
+    if log_file == "stdout":
+        print(output)
+    elif log_file == "stderr":
+        print(output, file=sys.stderr)
+    else:
+        Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+        with open(log_file, "w") as fo:
+            print(output, file=fo)
 
 
 def main():
@@ -149,7 +177,8 @@ def main():
     )
 
     parser.add_argument(
-        '-l', '--log', required=True, dest='log', metavar='FILE', help='output benchmarking file'
+        '-l', '--log', dest='log', metavar='FILE', default=DEFAULT_L,
+        help=f'output benchmarking file (or stderr/stdout) [{DEFAULT_L}]'
     )
 
     parser.add_argument(
@@ -158,7 +187,7 @@ def main():
     )
 
     args = parser.parse_args()
-    run(log_file=Path(args.log), experiment=args.experiment, command=args.command)
+    run(log_file=args.log, experiment=args.experiment, command=args.command)
 
 
 if __name__ == "__main__":
