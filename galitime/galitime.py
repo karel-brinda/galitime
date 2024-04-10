@@ -11,7 +11,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='Benchmark a command.')
     parser.add_argument('command',
                         help='The command to be benchmarked')
-    parser.add_argument('--log', required=True, help='Path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).')
+    parser.add_argument('--log', help='Path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).')
     parser.add_argument('--experiment',
                         help='Name of the experiment (to be attached to the output)')
     args = parser.parse_args()
