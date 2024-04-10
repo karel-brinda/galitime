@@ -14,13 +14,15 @@ PROGRAM = 'galitime'
 VERSION = version.VERSION
 DESC = 'benchmarking of computational experiments'
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='Benchmark a command.')
-    parser.add_argument('command',
-                        help='The command to be benchmarked')
-    parser.add_argument('--log', help='Path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).')
-    parser.add_argument('--experiment',
-                        help='Name of the experiment (to be attached to the output)')
+    parser.add_argument('command', help='The command to be benchmarked')
+    parser.add_argument(
+        '--log',
+        help='Path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).'
+    )
+    parser.add_argument('--experiment', help='Name of the experiment (to be attached to the output)')
     parser.add_argument(
         '-v',
         action='version',
@@ -49,12 +51,11 @@ def main():
     is_benchmarking_pipeline = args.command.split()[0] == "snakemake"
 
     with open(log_file, "w") as log_fh:
-        formatted_command = " ".join(
-            args.command.replace("\\\n", " ").strip().split())
+        formatted_command = " ".join(args.command.replace("\\\n", " ").strip().split())
         print(f"# Benchmarking command: {formatted_command}", file=log_fh)
         header = [
-            "real(s)", "sys(s)", "user(s)", "percent_CPU", "max_RAM(kb)",
-            "FS_inputs", "FS_outputs", "elapsed_time_alt(s)"
+            "real(s)", "sys(s)", "user(s)", "percent_CPU", "max_RAM(kb)", "FS_inputs", "FS_outputs",
+            "elapsed_time_alt(s)"
         ]
         if args.experiment:
             header = ['experiment'] + header
@@ -66,29 +67,26 @@ def main():
     benchmark_command = f'{time_command} -o {tmp_log_file} -f "%e\t%S\t%U\t%P\t%M\t%I\t%O"'
 
     start_time = datetime.datetime.now()
-    main_process = subprocess.Popen(f'{benchmark_command} {args.command}',
-                                    shell=True,
-                                    executable='/bin/bash')
+    main_process = subprocess.Popen(f'{benchmark_command} {args.command}', shell=True, executable='/bin/bash')
     if is_benchmarking_pipeline:
         RAM_tmp_log_file = Path(f"{log_file}.RAM.tmp")
-        RAM_benchmarking_process = subprocess.Popen([
-            sys.executable, "scripts/get_RAM_usage.py",
-            str(RAM_tmp_log_file),
-            str(main_process.pid)
-        ])
+        RAM_benchmarking_process = subprocess.Popen(
+            [sys.executable, "scripts/get_RAM_usage.py",
+             str(RAM_tmp_log_file),
+             str(main_process.pid)]
+        )
     return_code = main_process.wait()
     if return_code:
-        raise subprocess.CalledProcessError(return_code,
-                                            main_process.args,
-                                            output=main_process.stdout,
-                                            stderr=main_process.stderr)
+        raise subprocess.CalledProcessError(
+            return_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
+        )
 
     end_time = datetime.datetime.now()
     elapsed_seconds = (end_time - start_time).total_seconds()
     with open(tmp_log_file) as log_fh_tmp, open(log_file, "a") as log_fh:
         log_line = ""
         if args.experiment:
-            log_line=args.experiment.replace("\t", " ").strip()+"\t"
+            log_line = args.experiment.replace("\t", " ").strip() + "\t"
         log_line += log_fh_tmp.readline().strip()
         log_line += f"\t{elapsed_seconds}"
 
