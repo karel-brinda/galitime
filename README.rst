@@ -27,7 +27,7 @@ Quick example
 
 .. code-block:: bash
 
-    # brew install gnu-time # on OS X
+    if [[ $(uname) == "Darwin" ]]; then brew install gnu-time; fi
     conda install -y -c bioconda -c conda-forge galitime
     galitime --log time.log ls
 
@@ -88,7 +88,7 @@ Command-line parameters
 Output
 ------
 
-* ``experiment`` - Name of the experiment, if provided via -n
+* ``experiment`` - Name of the experiment, if provided via ``-n``
 * ``real_s`` - Real time in seconds (wall clock time)
 * ``user_s`` - User CPU time in seconds (user mode, excluding system calls)
 * ``sys_s`` - System CPU time in seconds (kernel mode)
