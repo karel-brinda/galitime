@@ -5,7 +5,14 @@ import argparse
 from pathlib import Path
 import subprocess
 import datetime
+import os
 
+sys.path.append(os.path.dirname(__file__))
+import version
+
+PROGRAM = 'galitime'
+VERSION = version.VERSION
+DESC = 'benchmarking of computational experiments'
 
 def get_args():
     parser = argparse.ArgumentParser(description='Benchmark a command.')
@@ -14,6 +21,12 @@ def get_args():
     parser.add_argument('--log', help='Path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).')
     parser.add_argument('--experiment',
                         help='Name of the experiment (to be attached to the output)')
+    parser.add_argument(
+        '-v',
+        action='version',
+        version='{} {}'.format(PROGRAM, VERSION),
+    )
+
     args = parser.parse_args()
     return args
 
