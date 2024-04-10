@@ -11,12 +11,16 @@ import tempfile
 
 from pathlib import Path
 
-sys.path.append(os.path.dirname(__file__))
-import version
 
 PROGRAM = 'galitime'
-VERSION = version.VERSION
 DESC = 'benchmarking of computational experiments using GNU time'
+
+try:
+    sys.path.append(os.path.dirname(__file__))
+    import version
+    VERSION = version.VERSION
+except ImportError:
+    VERSION = "(version NA)"
 
 DEFAULT_L = "stderr"
 
