@@ -83,7 +83,25 @@ Command-line parameters
       --experiment EXPERIMENT
                             Name of the experiment (to be attached to the output)
       -v                    show program's version number and exit
-    
+
+
+Output
+------
+
+* ``experiment`` - Name of the experiment, if provided via -n
+* ``real_s`` - Real time in seconds (wall clock time)
+* ``user_s`` - User CPU time in seconds (user mode, excluding system calls)
+* ``sys_s`` - System CPU time in seconds (kernel mode)
+* ``percent_cpu`` - CPU usage percentage
+* ``ram_kb`` - Maximum RAM usage in kilobytes
+* ``fs_inputs`` - File system read read operations count
+* ``fs_outputs`` - File system write operations count
+* ``python_real_s`` - Python-measured real time in seconds
+* ``command`` - Command executed, with tabs replaced by spaces
+
+
+
+
 
 Issues
 ------
