@@ -17,6 +17,15 @@ DESC = 'benchmarking of computational experiments using GNU time'
 
 
 def get_time_command():
+    """
+    Returns the appropriate time command based on the operating system.
+
+    Returns:
+        str: The time command to be used.
+
+    Raises:
+        Exception: If the operating system is not supported.
+    """
     if sys.platform == "linux":
         time_command = "/usr/bin/time"
     elif sys.platform == "darwin":
@@ -27,6 +36,20 @@ def get_time_command():
 
 
 def run(log_file, experiment, command):
+    """
+    Run a benchmarking command and log the results.
+
+    Args:
+        log_file (str): The path to the log file where the results will be logged.
+        experiment (str): Optional experiment name to include in the log.
+        command (str): The benchmarking command to run.
+
+    Raises:
+        subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
+
+    Returns:
+        None
+    """
     log_file.parent.mkdir(parents=True, exist_ok=True)
     tmp_log_file = Path(f"{log_file}.tmp")
 
@@ -69,6 +92,13 @@ def run(log_file, experiment, command):
 
 
 def main():
+    """
+    The main function of the script. It parses the command line arguments, runs the benchmarking command,
+    and logs the results.
+
+    Raises:
+        subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
+    """
 
     class CustomArgumentParser(argparse.ArgumentParser):
 
@@ -110,7 +140,7 @@ def main():
         "Contact: Karel Brinda <karel.brinda@inria.fr>",
     )
 
-    parser.add_argument('command', help='The command to be benchmarked')
+    parser.add_argument('command', help='the command to be benchmarked')
 
     parser.add_argument(
         '-v',
