@@ -21,6 +21,18 @@ Introduction
 Software for benchmarking programs using [GNU Time](https://www.gnu.org/software/time/).
 
 
+
+Quick example
+-------------
+
+.. code-block:: bash
+
+    # brew install gnu-time # on OS X
+    conda install -y -c bioconda -c conda-forge galitime
+    galitime --log time.log  ls
+
+
+
 Installation
 ------------
 
@@ -49,14 +61,6 @@ Install the Galitime Python package:
 
     pip install -U galitime
 
-
-Quick example
--------------
-
-.. code-block:: bash
-
-    conda install galitime
-    galitime ls
 
 
 Command-line parameters
