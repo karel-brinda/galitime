@@ -12,7 +12,7 @@ galitime
 .. |ci-tests-badge| image:: https://github.com/karel-brinda/galitime/actions/workflows/ci.yml/badge.svg
     :target: https://github.com/karel-brinda/galitime/actions/
 
-|info-badge| |github-release-badge| |pypi-badge| |doi-badge| |ci-tests-badge|
+|info-badge| |github-release-badge| |pypi-badge| |ci-tests-badge|
 
 
 Introduction
@@ -23,6 +23,14 @@ Software for benchmarking programs using [GNU Time](https://www.gnu.org/software
 
 Installation
 ------------
+
+Dependencies
+~~~~~~~~~~~~
+
+Galitime has no dependencies beyond Python 3. However, on OS X
+it requires the GNU version of the `time` command (`gtime`),
+which can be installed by `brew install gnu-time`.
+
 
 Using Bioconda
 ~~~~~~~~~~~~~~
@@ -35,13 +43,7 @@ Using Bioconda
 Using PyPI
 ~~~~~~~~~~
 
-First, install the following dependencies:
-
-* `Mash <https://github.com/marbl/Mash>`_
-* `QuickTree <https://github.com/khowe/quicktree>`_
-
-
-Then install the Galitime Python package:
+Install the Galitime Python package:
 
 .. code-block:: bash
 
