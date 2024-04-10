@@ -45,7 +45,9 @@ def run(log_file, experiment, command):
     benchmark_command = f'{time_command} -o {tmp_log_file} -f "%e\t%S\t%U\t%P\t%M\t%I\t%O"'
 
     start_time = datetime.datetime.now()
-    main_process = subprocess.Popen(f'{benchmark_command} {command}', shell=True, executable='/bin/bash')
+    main_process = subprocess.Popen(
+        f'{benchmark_command} {command}', shell=True, executable='/bin/bash'
+    )
     return_code = main_process.wait()
     if return_code:
         raise subprocess.CalledProcessError(
@@ -71,7 +73,7 @@ def main():
     class CustomArgumentParser(argparse.ArgumentParser):
 
         def __init__(self, prog=None, **kwargs):
-            super().__init__(prog="attotree", **kwargs)
+            super().__init__(prog="galitime", **kwargs)
 
         def print_help(self):
             """
@@ -105,21 +107,23 @@ def main():
     parser = CustomArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description="Program: {} ({})\n".format(PROGRAM, DESC) + "Version: {}\n".format(VERSION) +
-        "Contact:  Karel Brinda <karel.brinda@inria.fr>",
+        "Contact: Karel Brinda <karel.brinda@inria.fr>",
     )
 
     parser.add_argument('command', help='The command to be benchmarked')
+
     parser.add_argument(
         '-v',
         action='version',
         version='{} {}'.format(PROGRAM, VERSION),
     )
+
     parser.add_argument(
-        '-l', required=True, dest='log', metavar='FILE',
-        help='path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).'
+        '-l', '--log', required=True, dest='log', metavar='FILE', help='output benchmarking file'
     )
+
     parser.add_argument(
-        '-n', metavar='STR', help='name of the experiment (to be attached to the output)', dest='experiment',
+        '-n', '--name', metavar='STR', help='name of the experiment', dest='experiment',
         default=None
     )
 
