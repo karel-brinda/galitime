@@ -6,13 +6,14 @@ from pathlib import Path
 import subprocess
 import datetime
 import os
+import re
 
 sys.path.append(os.path.dirname(__file__))
 import version
 
 PROGRAM = 'galitime'
 VERSION = version.VERSION
-DESC = 'benchmarking of computational experiments'
+DESC = 'benchmarking of computational experiments using GNU time'
 
 
 def get_time_command():
@@ -66,17 +67,60 @@ def run(log_file, experiment, command):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Benchmark a command.')
-    parser.add_argument('command', help='The command to be benchmarked')
-    parser.add_argument(
-        '--log', required=True,
-        help='Path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).'
+
+    class CustomArgumentParser(argparse.ArgumentParser):
+
+        def __init__(self, prog=None, **kwargs):
+            super().__init__(prog="attotree", **kwargs)
+
+        def print_help(self):
+            """
+            Prints the help message.
+
+            Returns:
+                None
+            """
+            msg = self.format_help()
+            repl = re.compile(r'\]\s+\[')
+            msg = repl.sub("] [", msg)
+            msg = msg.replace(" [-h] [-v]", "")
+            msg = msg.replace(", --help", "        ")
+            print(msg)
+
+        def format_help(self):
+            formatter = self._get_formatter()
+            formatter.add_text(" \n" + self.description)
+            formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
+            formatter.add_text(self.epilog)
+
+            # positionals, optionals and user-defined groups
+            for action_group in self._action_groups:
+                formatter.start_section(action_group.title)
+                formatter.add_text(action_group.description)
+                formatter.add_arguments(action_group._group_actions)
+                formatter.end_section()
+
+            return formatter.format_help()
+
+    parser = CustomArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="Program: {} ({})\n".format(PROGRAM, DESC) + "Version: {}\n".format(VERSION) +
+        "Contact:  Karel Brinda <karel.brinda@inria.fr>",
     )
-    parser.add_argument('--experiment', help='Name of the experiment (to be attached to the output)')
+
+    parser.add_argument('command', help='The command to be benchmarked')
     parser.add_argument(
         '-v',
         action='version',
         version='{} {}'.format(PROGRAM, VERSION),
+    )
+    parser.add_argument(
+        '-l', required=True, dest='log', metavar='FILE',
+        help='path to the log file with benchmark statistics (if the directory doesn\'t exist, it will be created).'
+    )
+    parser.add_argument(
+        '-n', metavar='STR', help='name of the experiment (to be attached to the output)', dest='experiment',
+        default=None
     )
 
     args = parser.parse_args()
