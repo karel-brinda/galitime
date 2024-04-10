@@ -70,8 +70,7 @@ Command-line parameters
 .. code-block::
 
     $ galitime -h
-    
-    usage: galitime [-h] --log LOG [--experiment EXPERIMENT] command
+    usage: galitime [-h] --log LOG [--experiment EXPERIMENT] [-v] command
 
     Benchmark a command.
 
@@ -83,6 +82,7 @@ Command-line parameters
       --log LOG             Path to the log file with benchmark statistics (if the directory doesn't exist, it will be created).
       --experiment EXPERIMENT
                             Name of the experiment (to be attached to the output)
+      -v                    show program's version number and exit
     
 
 Issues
