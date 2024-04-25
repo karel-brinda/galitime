@@ -61,9 +61,9 @@ def run_single_instance(command, experiment):
     with tempfile.TemporaryDirectory() as dir_fn:
         tmp_fn = os.path.join(dir_fn, "gtime_output.txt")
         gtime_columns = (
-            "real_s", "user_s", "sys_s", "percent_cpu", "ram_kb", "fs_inputs", "fs_outputs"
+            "real_s", "user_s", "sys_s", "percent_cpu", "ram_kb", "exit_code", "fs_inputs", "fs_outputs"
         )
-        gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%I\t%O"
+        gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
         benchmark_wrapper = f'{get_time_command()} -o {tmp_fn} -f "{gtime_columns_spec}"'
 
         start_time = datetime.datetime.now()
