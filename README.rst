@@ -27,9 +27,14 @@ Quick example
 
 .. code-block:: bash
 
-    if [[ $(uname) == "Darwin" ]]; then brew install gnu-time; fi
-    conda install -y -c bioconda -c conda-forge galitime
-    galitime --log time.log ls
+    $ if [[ $(uname) == "Darwin" ]]; then brew install gnu-time; fi
+    $ conda install -y -c bioconda -c conda-forge galitime
+
+    $ galitime --log time.log ls
+
+    $ cat time.log
+    real_s  sys_s   user_s  percent_cpu ram_kb  fs_inputs   fs_outputs  python_real_s   command
+    0.04    0.00    0.00    10% 2904    0   0   0.103032    ls
 
 
 
