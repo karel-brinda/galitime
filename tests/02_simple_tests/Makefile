@@ -25,6 +25,7 @@ help: ## Print help messages
 		| column -c2 -t -s : )"
 
 clean: ## Clean
+	rm -f *.log
 
 cleanall: clean ## Clean all
 
