@@ -86,7 +86,7 @@ def run_single_instance(command, experiment):
         d[k] = v
 
     # 3) elapsed time
-    d["python_real_s"] = str((end_time - start_time).total_seconds())
+    d["real_s_alt"] = str((end_time - start_time).total_seconds())
 
     # 4) formatted command
     d["command"] = " ".join(command.replace("\\\n", " ").strip().split())
