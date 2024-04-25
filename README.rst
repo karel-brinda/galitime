@@ -33,8 +33,8 @@ Quick example
     $ galitime --log time.log ls
 
     $ cat time.log
-    real_s  sys_s   user_s  percent_cpu ram_kb  fs_inputs   fs_outputs  python_real_s   command
-    0.04    0.00    0.00    10% 2904    0   0   0.103032    ls
+    real_s  user_s  sys_s   percent_cpu max_ram_kb  exit_code   fs_inputs   fs_outputs  real_s_alt  command
+    0.03    0.00    0.00    10% 2904    0   0   0   0.076661    ls
 
 
 
@@ -98,10 +98,11 @@ Output
 * ``user_s`` - User CPU time in seconds (user mode, excluding system calls)
 * ``sys_s`` - System CPU time in seconds (kernel mode)
 * ``percent_cpu`` - CPU usage percentage
-* ``ram_kb`` - Maximum RAM usage in kilobytes
+* ``max_ram_kb`` - Maximum RAM usage in kilobytes
+* ``exit_code`` - Exit code of the command (0 if everything ok)
 * ``fs_inputs`` - File system read read operations count
 * ``fs_outputs`` - File system write operations count
-* ``python_real_s`` - Python-measured real time in seconds
+* ``real_s_alt`` - Python-measured real time in seconds (slightly higher than ``real_s``)
 * ``command`` - Command executed, with tabs replaced by spaces
 
 
