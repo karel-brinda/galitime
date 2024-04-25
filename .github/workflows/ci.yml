@@ -8,15 +8,25 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest]
-        python-version: [ 3.7, 3.8, 3.9, "3.10", 3.11, 3.12 ]
+        python-version: [ 3.9, "3.10", 3.11, 3.12 ]
+        exclude:
+          - python-version: "3.8"
+            os: "macos-latest"
+          - python-version: "3.9"
+            os: "macos-latest"
+        include:
+          - python-version: "3.8"
+            os: "macos-13"
+          - python-version: "3.9"
+            os: "macos-13"
 
     steps:
     - uses: actions/checkout@v4
     - name: Install brew on osx
-      if:   matrix.os == 'macos-latest'
+      if:   contains(matrix.os, 'macos')
       uses: Homebrew/actions/setup-homebrew@master
     - name: Install gtime on osx
-      if:   matrix.os == 'macos-latest'
+      if:   contains(matrix.os, 'macos')
       run:  brew install gnu-time
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
