@@ -103,7 +103,7 @@ class AbstractTime(ABC):
         """
         # TODO: change to /usr/bin/env bash
         wrapped_cmd = f'{self.wrapper()} {self.cmd}'
-        print(f"Running '{wrapped_cmd}'")
+        #print(f"Running '{wrapped_cmd}'")
         main_process = subprocess.Popen(wrapped_cmd, shell=True, executable='/bin/bash')
 
         #TODO: integrate timeout into the whole method
