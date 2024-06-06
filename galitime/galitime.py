@@ -9,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 
+from abc import ABC, abstractmethod
+
 from pathlib import Path
 
 PROGRAM = 'galitime'
@@ -24,74 +26,91 @@ except ImportError:
 DEFAULT_L = "stderr"
 
 
-def get_time_command():
-    """
-    Returns the appropriate time command based on the operating system.
+class TimingResults:
 
-    Returns:
-        str: The time command to be used.
+    def __init__(self, experiment=None):
+        se
+        if experiment:
+            d['experiment'] = experiment
 
-    Raises:
-        Exception: If the operating system is not supported.
-    """
-    if sys.platform == "linux":
-        time_command = "/usr/bin/time"
-    elif sys.platform == "darwin":
-        time_command = "gtime"
-    else:
-        raise Exception("Unsupported OS")
-    return time_command
+    def get_header(self):
+        return (x for x in self.results)
+
+    def get_values(self):
+        return (self.results[x] for x in self.results)
+
+    def get_values_str(self):
+        return (str(x) for x in self.get_values())
 
 
-def run_single_instance(command, experiment):
+class TimeCommand(ABC):
 
-    d = collections.OrderedDict()
+    def __init__(self, cmd, experiment=None):
+        if experiment:
+            d['experiment'] = experiment
+        with tempfile.TemporaryDirectory() as dir_fn:
+            self.tmp_fn = os.path.join(dir_fn, "gtime_output.txt")
 
-    # 1) experiment name (if user-specified)
-    if experiment:
-        d['experiment'] = experiment
+    def run(self, times=1):
+        for i in range(times):
+            self._execute_time(run=i)
+            self._parse_results()
+            self._save_results()
 
-    # 2) GNU time measurements
-    header = [
-        "real(s)", "sys(s)", "user(s)", "percent_CPU", "max_RAM(kb)", "FS_inputs", "FS_outputs",
-        "elapsed_time_alt(s)"
-    ]
-
-    with tempfile.TemporaryDirectory() as dir_fn:
-        tmp_fn = os.path.join(dir_fn, "gtime_output.txt")
-        gtime_columns = (
-            "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
-            "fs_outputs"
-        )
-        gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
-        benchmark_wrapper = f'{get_time_command()} -o {tmp_fn} -f "{gtime_columns_spec}"'
-
+    def _execute_time(self, run):
         start_time = datetime.datetime.now()
         main_process = subprocess.Popen(
             f'{benchmark_wrapper} {command}', shell=True, executable='/bin/bash'
         )
         return_code = main_process.wait()
         end_time = datetime.datetime.now()
-
         if return_code:
             raise subprocess.CalledProcessError(
                 return_code, main_process.args, output=main_process.stdout,
                 stderr=main_process.stderr
             )
 
+    @abstractmethod
+    def _parse_results(self):
+        pass
+
+    def _save_results(self):
+        pass
+
+    @abstractmethod
+    def parse_output(self):
+        # 3) elapsed time
+        d["real_s_alt"] = str((end_time - start_time).total_seconds())
+
+        # 4) formatted command
+        d["command"] = " ".join(command.replace("\\\n", " ").strip().split())
+
+
+class GnuTime:
+
+    def __init__(self):
+        if sys.platform == "linux":
+            time_command = "/usr/bin/time"
+        elif sys.platform == "darwin":
+            time_command = "gtime"
+        else:
+            raise Exception("Unsupported OS")
+        gtime_columns = (
+            "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
+            "fs_outputs"
+        )
+        gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
+        self.wrapper = f'{time_command} -o {self.tmp_fn} -f "{gtime_columns_spec}"'
+
+    def parse_output(self):
         with open(tmp_fn) as tmp_fo:
             gtime_output_values = tmp_fo.readline().strip().split("\t")
+        for k, v in zip(gtime_columns, gtime_output_values):
+            d[k] = v
 
-    for k, v in zip(gtime_columns, gtime_output_values):
-        d[k] = v
 
-    # 3) elapsed time
-    d["real_s_alt"] = str((end_time - start_time).total_seconds())
-
-    # 4) formatted command
-    d["command"] = " ".join(command.replace("\\\n", " ").strip().split())
-
-    return d
+class MacTime:
+    pass
 
 
 def run(log_file, command, experiment):
