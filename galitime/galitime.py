@@ -36,7 +36,7 @@ class TimingResult:
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
             "experiment", "run", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu",
-            "max_ram_kb", "exit_code", "command"
+            "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
         )
         for x in mandatory_columns:
             self._data[x] = None
@@ -63,7 +63,8 @@ class TimingResult:
         return repr(self._data)
 
     def __str__(self):
-        return "\t".join(self.keys()) + "\n" + "\t".join(self.values())
+        return "\t".join(map(str, self._data.keys())
+                         ) + "\n" + "\t".join(map(str, self._data.values()))
 
 
 class AbstractTime(ABC):
@@ -95,15 +96,15 @@ class AbstractTime(ABC):
             self._save_result()
 
     def current_tmp_fn(self):
-        return os.path.join(self.tmp_dir, f"timing_output_{i}.log")
+        return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
 
     def _execute_time(self):
         """Execute time, whatever command it is
         """
         # TODO: change to /usr/bin/env bash
-        main_process = subprocess.Popen(
-            f'{self.wrapper} {self.cmd}', shell=True, executable='/bin/bash'
-        )
+        wrapped_cmd = f'{self.wrapper()} {self.cmd}'
+        print(f"Running '{wrapped_cmd}'")
+        main_process = subprocess.Popen(wrapped_cmd, shell=True, executable='/bin/bash')
 
         #TODO: integrate timeout into the whole method
         timeout = None
@@ -130,8 +131,8 @@ class AbstractTime(ABC):
         self.results.append(self.current_result)
         self.current_result = None
 
-    def __str__():
-        lines = "\n".join([x for x in self.results]).split("\n")
+    def __str__(self):
+        lines = "\n".join([str(x) for x in self.results]).split("\n")
         seen = set()
         unique_list = []
         for x in lines:
@@ -158,13 +159,13 @@ class GnuTime(AbstractTime):
             "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
             "fs_outputs"
         )
-        self.wrapper = f'{time_command} -o {self.current_tmp_fn} -f "{self.gtime_columns_spec}"'
+        self.wrapper = lambda: f'{time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
 
     def _parse_result(self):
         with open(self.current_tmp_fn()) as tmp_fo:
             gtime_output_values = tmp_fo.readline().strip().split("\t")
         for k, v in zip(self.gtime_columns, gtime_output_values):
-            self.current_results[k] = v
+            self.current_result[k] = v
 
 
 class MacTime:
@@ -196,7 +197,7 @@ def run(log_file, command, experiment):
     else:
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         with open(log_file, "w") as fo:
-            print(output, file=fo)
+            print(t, file=fo)
 
 
 def main():
