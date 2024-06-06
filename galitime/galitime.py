@@ -39,18 +39,26 @@ class TimingResult:
             "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
         )
         for x in mandatory_columns:
-            self._data[x] = None
+            self.add(x, None)
 
         # 2. insert experiment parameters
-        self['experiment'] = experiment
-        self['run'] = run
-        self['command'] = cmd
+        self.set('experiment', experiment)
+        self.set('run', run)
+        self.set('command', cmd)
 
     def __getitem__(self, key):
         return self._data[key]
 
-    def __setitem__(self, key, value):
+    #def __setitem__(self, key, value):
+    #    assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
+    #    self._data[key] = value
+
+    def set(self, key, value):
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
+        self._data[key] = value
+
+    def add(self, key, value):
+        assert key not in self._data, f"The key '{key}' is already in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
         self._data[key] = value
 
     def __delitem__(self, key):
@@ -114,8 +122,8 @@ class AbstractTime(ABC):
         except subprocess.TimeoutExpired:
             exit_code = -1  # timeout
         end_time = datetime.datetime.now()
-        self.current_result["real_s_py"] = (end_time - start_time).total_seconds()
-        self.current_result["exit_code"] = exit_code
+        self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
+        self.current_result.set("exit_code", exit_code)
 
         # TODO: different treating based on the expected behaviour
         if exit_code:
@@ -152,7 +160,7 @@ class GnuTime(AbstractTime):
             # TODO: verify gtime is present
             time_command = "/usr/bin/env gtime"
         else:
-            raise Exception("Unsupported OS")
+            raise Exception(f"Unsupported OS ({sys.platform})")
 
         self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
         self.gtime_columns = (
@@ -165,11 +173,43 @@ class GnuTime(AbstractTime):
         with open(self.current_tmp_fn()) as tmp_fo:
             gtime_output_values = tmp_fo.readline().strip().split("\t")
         for k, v in zip(self.gtime_columns, gtime_output_values):
-            self.current_result[k] = v
+            self.current_result.set(k, v)
 
 
-class MacTime:
-    pass
+class MacTime(AbstractTime):
+
+    def __init__(self, cmd, experiment=None):
+        super().__init__(cmd=cmd, experiment=experiment)
+        if sys.platform == "darwin":
+            time_command = "/usr/bin/env time"
+        else:
+            raise Exception(f"Unsupported OS ({sys.platform})")
+
+        self.wrapper = lambda: f'{time_command} -o {self.current_tmp_fn()} -l -p'
+
+    def _read_mactime_dict(self):
+        d = collections.OrderedDict()
+        with open(self.current_tmp_fn()) as tmp_fo:
+            for x in tmp_fo:
+                x = x.strip()
+                v, k = x.split(maxsplit=1)
+                if v in ["real", "user", "sys"]:
+                    d[v] = k
+                else:
+                    d[k] = v
+        return d
+
+    def _parse_result(self):
+        d = self._read_mactime_dict()
+        print(d)
+        self.current_result.set("real_s", d["real"])
+        self.current_result.set("user_s", d["user"])
+        self.current_result.set("sys_s", d["sys"])
+        self.current_result.add("max_ram_kb_alt", d["maximum resident set size"])
+        self.current_result.set("max_ram_kb", d["peak memory footprint"])
+
+        #for k, v in zip(self.gtime_columns, gtime_output_values):
+        #    self.current_result[k] = v
 
 
 def run(log_file, command, experiment):
@@ -188,6 +228,7 @@ def run(log_file, command, experiment):
         None
     """
     t = GnuTime(command, experiment)
+    #t = MacTime(command, experiment)
     t.run()
 
     if log_file == "stdout":
