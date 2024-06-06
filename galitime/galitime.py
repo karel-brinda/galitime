@@ -50,6 +50,7 @@ class TimingResult:
         return self._data[key]
 
     def __setitem__(self, key, value):
+        assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug"
         self._data[key] = value
 
     def __delitem__(self, key):
@@ -61,12 +62,15 @@ class TimingResult:
     def __repr__(self):
         return repr(self._data)
 
+    def __str__(self):
+        return "\t".join(self.keys()) + "\n" + "\t".join(self.values())
+
 
 class TimeCommand(ABC):
 
     def __init__(self, cmd, experiment=None):
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.all_results = []  # all processed results
+        self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
         self.cmd = cmd
@@ -84,8 +88,8 @@ class TimeCommand(ABC):
             run = None if times == 1 else self.current_i
             self.current_result = TimingResult(experiment=experiment, run=run, cmd=self.cmd_simpl)
             self._execute_time()
-            self._parse_results()
-            self._save_results()
+            self._parse_result()
+            self._save_result()
 
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir, f"timing_output_{i}.log")
@@ -117,12 +121,22 @@ class TimeCommand(ABC):
             )
 
     @abstractmethod
-    def _parse_results(self):
+    def _parse_result(self):
         pass
 
-    def _save_results(self):
-        self.results.append(self.result)
+    def _save_result(self):
+        self.results.append(self.current_result)
         self.current_result = None
+
+    def __str__():
+        lines = "\n".join([x for x in self.results]).split("\n")
+        seen = set()
+        unique_list = []
+        for x in lines:
+            if x not in seen:
+                seen.add(x)
+                unique_list.append(x)
+        return "\n".join(unique_list)
 
     @abstractmethod
     def parse_output(self):
@@ -149,10 +163,10 @@ class GnuTime:
         self.wrapper = f'{time_command} -o {self.current_tmp_fn} -f "{gtime_columns_spec}"'
 
     def parse_output(self):
-        with open(tmp_fn) as tmp_fo:
+        with open(self.current_tmp_fn()) as tmp_fo:
             gtime_output_values = tmp_fo.readline().strip().split("\t")
         for k, v in zip(gtime_columns, gtime_output_values):
-            d[k] = v
+            self.current_results[k] = v
 
 
 class MacTime:
@@ -174,14 +188,13 @@ def run(log_file, command, experiment):
     Returns:
         None
     """
-    d = run_single_instance(command, experiment)
-
-    output = "\t".join(d.keys()) + "\n" + "\t".join(d.values())
+    t = GnuTime(command, experiment)
+    t.run()
 
     if log_file == "stdout":
-        print(output)
+        print(t)
     elif log_file == "stderr":
-        print(output, file=sys.stderr)
+        print(t, file=sys.stderr)
     else:
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         with open(log_file, "w") as fo:
