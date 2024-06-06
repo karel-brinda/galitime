@@ -147,10 +147,10 @@ class GnuTime(AbstractTime):
     def __init__(self, cmd, experiment=None):
         super().__init__(cmd=cmd, experiment=experiment)
         if sys.platform == "linux":
-            time_command = "/usr/bin/time"
+            time_command = "/usr/bin/env time"
         elif sys.platform == "darwin":
             # TODO: verify gtime is present
-            time_command = "gtime"
+            time_command = "/usr/bin/env gtime"
         else:
             raise Exception("Unsupported OS")
 
