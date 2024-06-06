@@ -35,8 +35,8 @@ class TimingResult:
 
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
-            "experiment", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu", "max_ram_kb",
-            "exit_code", "command"
+            "experiment", "run", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu",
+            "max_ram_kb", "exit_code", "command"
         )
         for x in mandatory_columns:
             self._data[x] = None
@@ -50,7 +50,7 @@ class TimingResult:
         return self._data[key]
 
     def __setitem__(self, key, value):
-        assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug"
+        assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
         self._data[key] = value
 
     def __delitem__(self, key):
@@ -66,18 +66,19 @@ class TimingResult:
         return "\t".join(self.keys()) + "\n" + "\t".join(self.values())
 
 
-class TimeCommand(ABC):
+class AbstractTime(ABC):
 
     def __init__(self, cmd, experiment=None):
+        self.experiment = experiment
+        self.cmd = cmd
+        self.cmd_simpl = " ".join(cmd.replace("\\\n", " ").strip().split())
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
-        self.cmd = cmd
-        self.cmd_simpl = " ".join(command.replace("\\\n", " ").strip().split())
 
     def __del__(self):
-        self.temp_dir.cleanup()
+        self.tmp_dir.cleanup()
 
     # TODO: add possibility to set up multiple repetitions
     def run(self, times=1):
@@ -86,7 +87,9 @@ class TimeCommand(ABC):
         for i in range(times):
             self.current_i += 1
             run = None if times == 1 else self.current_i
-            self.current_result = TimingResult(experiment=experiment, run=run, cmd=self.cmd_simpl)
+            self.current_result = TimingResult(
+                experiment=self.experiment, run=run, cmd=self.cmd_simpl
+            )
             self._execute_time()
             self._parse_result()
             self._save_result()
@@ -94,30 +97,29 @@ class TimeCommand(ABC):
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir, f"timing_output_{i}.log")
 
-    def _execute_time(self, run):
+    def _execute_time(self):
         """Execute time, whatever command it is
         """
         # TODO: change to /usr/bin/env bash
         main_process = subprocess.Popen(
-            f'{self.wrapper} {self.command}', shell=True, executable='/bin/bash'
+            f'{self.wrapper} {self.cmd}', shell=True, executable='/bin/bash'
         )
 
         #TODO: integrate timeout into the whole method
         timeout = None
         start_time = datetime.datetime.now()
         try:
-            return_code = main_process.wait(timeout=timeout)
+            exit_code = main_process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            return_code = -1  # timeout
+            exit_code = -1  # timeout
         end_time = datetime.datetime.now()
         self.current_result["real_s_py"] = (end_time - start_time).total_seconds()
-        self.current_result["return_code"] = return_code
+        self.current_result["exit_code"] = exit_code
 
         # TODO: different treating based on the expected behaviour
-        if return_code:
+        if exit_code:
             raise subprocess.CalledProcessError(
-                return_code, main_process.args, output=main_process.stdout,
-                stderr=main_process.stderr
+                exit_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
             )
 
     @abstractmethod
@@ -138,15 +140,11 @@ class TimeCommand(ABC):
                 unique_list.append(x)
         return "\n".join(unique_list)
 
-    @abstractmethod
-    def parse_output(self):
-        pass
 
-
-class GnuTime:
+class GnuTime(AbstractTime):
 
     def __init__(self, cmd, experiment=None):
-        super().__init__(cmd, experiment=None)
+        super().__init__(cmd=cmd, experiment=experiment)
         if sys.platform == "linux":
             time_command = "/usr/bin/time"
         elif sys.platform == "darwin":
@@ -160,12 +158,12 @@ class GnuTime:
             "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
             "fs_outputs"
         )
-        self.wrapper = f'{time_command} -o {self.current_tmp_fn} -f "{gtime_columns_spec}"'
+        self.wrapper = f'{time_command} -o {self.current_tmp_fn} -f "{self.gtime_columns_spec}"'
 
-    def parse_output(self):
+    def _parse_result(self):
         with open(self.current_tmp_fn()) as tmp_fo:
             gtime_output_values = tmp_fo.readline().strip().split("\t")
-        for k, v in zip(gtime_columns, gtime_output_values):
+        for k, v in zip(self.gtime_columns, gtime_output_values):
             self.current_results[k] = v
 
 
