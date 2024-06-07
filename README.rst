@@ -18,7 +18,10 @@ galitime
 Introduction
 ------------
 
-Software for benchmarking programs using `GNU Time <https://www.gnu.org/software/time/>`_.
+Software for benchmarking programs using the `GNU Time <https://www.gnu.org/software/time/>`_ command,
+with extensive benchmarking options and unified behaviour across platforms (including output units).
+Inspired by the benchmarking script in `Phylign <https://github.com/karel-brinda/phylign>`_
+developed by `Leandro Lima <https://github.com/leoisl>`_.
 
 
 
@@ -94,15 +97,16 @@ Output
 ------
 
 * ``experiment`` - Name of the experiment, if provided via ``-n``
+* ``run`` - Number of run in case of multiple repetitions
 * ``real_s`` - Real time in seconds (wall clock time)
+* ``real_s_py`` - Python-measured real time in seconds (slightly higher than ``real_s``)
 * ``user_s`` - User CPU time in seconds (user mode, excluding system calls)
 * ``sys_s`` - System CPU time in seconds (kernel mode)
 * ``percent_cpu`` - CPU usage percentage
 * ``max_ram_kb`` - Maximum RAM usage in kilobytes
-* ``exit_code`` - Exit code of the command (0 if everything ok)
+* ``exit_code`` - Exit code of the command (0 if everything ok, -1 if command failed)
 * ``fs_inputs`` - File system read read operations count
 * ``fs_outputs`` - File system write operations count
-* ``real_s_alt`` - Python-measured real time in seconds (slightly higher than ``real_s``)
 * ``command`` - Command executed, with tabs replaced by spaces
 
 
@@ -127,8 +131,7 @@ Licence
 `MIT <https://github.com/karel-brinda/galitime/blob/master/LICENSE.txt>`_
 
 
-Authors
+Contact
 -------
 
 * `Karel Brinda <http://brinda.eu>`_ <karel.brinda@inria.fr>
-* `Leandro Lima <https://github.com/leoisl>`_
