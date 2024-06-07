@@ -24,6 +24,7 @@ except ImportError:
     VERSION = "(version NA)"
 
 DEFAULT_L = "stderr"
+DEFAULT_r = 1
 
 
 class TimingResult:
@@ -217,7 +218,7 @@ class MacTime(AbstractTime):
         #    self.current_result[k] = v
 
 
-def run_timing(log_file, command, experiment, gtime):
+def run_timing(log_file, command, experiment, gtime, repetitions):
     """
     Run a benchmarking command and log the results.
 
@@ -246,7 +247,7 @@ def run_timing(log_file, command, experiment, gtime):
         else:
             raise Exception(f"Unsupported OS ({platf})")
 
-    t.run()
+    t.run(times=repetitions)
 
     if log_file == "stdout" or log_file == "-":
         print(t)
@@ -316,6 +317,11 @@ def main():
     )
 
     parser.add_argument(
+        '-r', '--repetitions', dest='reps', metavar='INT', type=int, default=DEFAULT_r,
+        help=f'number of repetitions [{DEFAULT_r}]'
+    )
+
+    parser.add_argument(
         '-g', '--gtime', dest='gtime', action='store_true', help=f'call gtime instead of time'
     )
 
@@ -332,7 +338,8 @@ def main():
     args = parser.parse_args()
 
     run_timing(
-        log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime
+        log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
+        repetitions=args.reps
     )
 
 
