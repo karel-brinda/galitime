@@ -46,6 +46,9 @@ class TimingResult:
         self.set('run', run)
         self.set('command', command)
 
+    def bin_to_si(self, key):
+        self._data[key] = int(round(int(self._data[key]) * 1.024))
+
     def __getitem__(self, key):
         return self._data[key]
 
@@ -168,6 +171,7 @@ class GnuTime(AbstractTime):
             gtime_output_values = tmp_fo.readline().strip().split("\t")
         for k, v in zip(self.gtime_columns, gtime_output_values):
             self.current_result.set(k, v)
+        self.current_result.bin_to_si("max_ram_kb")
 
 
 class MacTime(AbstractTime):
@@ -188,9 +192,16 @@ class MacTime(AbstractTime):
                 x = x.strip()
                 v, k = x.split(maxsplit=1)
                 if v in ["real", "user", "sys"]:
-                    d[v] = k
+                    kk = v
+                    vv = k
                 else:
-                    d[k] = v
+                    kk = k
+                    vv = v
+                if vv.isdigit():
+                    vvv = int(vv)
+                else:
+                    vvv = vv
+                d[kk] = vvv
         return d
 
     def _parse_result(self):
@@ -199,8 +210,8 @@ class MacTime(AbstractTime):
         self.current_result.set("real_s", d["real"])
         self.current_result.set("user_s", d["user"])
         self.current_result.set("sys_s", d["sys"])
-        self.current_result.add("max_ram_kb_alt", d["maximum resident set size"])
-        self.current_result.set("max_ram_kb", d["peak memory footprint"])
+        self.current_result.set("max_ram_kb", int(round(d["maximum resident set size"] / 1000)))
+        self.current_result.add("max_ram_kb_alt", int(round(d["peak memory footprint"] / 1000)))
 
         #for k, v in zip(self.gtime_columns, gtime_output_values):
         #    self.current_result[k] = v
