@@ -28,7 +28,7 @@ DEFAULT_L = "stderr"
 
 class TimingResult:
 
-    def __init__(self, experiment=None, run=None, cmd=None):
+    def __init__(self, experiment=None, run=None, command=None):
         """Setup all the fields
         """
         self._data = collections.OrderedDict()
@@ -44,7 +44,7 @@ class TimingResult:
         # 2. insert experiment parameters
         self.set('experiment', experiment)
         self.set('run', run)
-        self.set('command', cmd)
+        self.set('command', command)
 
     def __getitem__(self, key):
         return self._data[key]
@@ -77,10 +77,11 @@ class TimingResult:
 
 class AbstractTime(ABC):
 
-    def __init__(self, cmd, experiment=None):
+    def __init__(self, command, experiment, time):
+        self.time_command = time
         self.experiment = experiment
-        self.cmd = cmd
-        self.cmd_simpl = " ".join(cmd.replace("\\\n", " ").strip().split())
+        self.command = command
+        self.command_simpl = " ".join(command.replace("\\\n", " ").strip().split())
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.results = []  # all processed results
         self.current_i = 0
@@ -97,7 +98,7 @@ class AbstractTime(ABC):
             self.current_i += 1
             run = None if times == 1 else self.current_i
             self.current_result = TimingResult(
-                experiment=self.experiment, run=run, cmd=self.cmd_simpl
+                experiment=self.experiment, run=run, command=self.command_simpl
             )
             self._execute_time()
             self._parse_result()
@@ -110,9 +111,9 @@ class AbstractTime(ABC):
         """Execute time, whatever command it is
         """
         # TODO: change to /usr/bin/env bash
-        wrapped_cmd = f'{self.wrapper()} {self.cmd}'
-        #print(f"Running '{wrapped_cmd}'")
-        main_process = subprocess.Popen(wrapped_cmd, shell=True, executable='/bin/bash')
+        wrapped_command = f'{self.wrapper()} {self.command}'
+        #print(f"Running '{wrapped_command}'")
+        main_process = subprocess.Popen(wrapped_command, shell=True, executable='/bin/bash')
 
         #TODO: integrate timeout into the whole method
         timeout = None
@@ -152,22 +153,15 @@ class AbstractTime(ABC):
 
 class GnuTime(AbstractTime):
 
-    def __init__(self, cmd, experiment=None):
-        super().__init__(cmd=cmd, experiment=experiment)
-        if sys.platform == "linux":
-            time_command = "/usr/bin/env time"
-        elif sys.platform == "darwin":
-            # TODO: verify gtime is present
-            time_command = "/usr/bin/env gtime"
-        else:
-            raise Exception(f"Unsupported OS ({sys.platform})")
+    def __init__(self, command, time="/usr/bin/env time", experiment=None):
+        super().__init__(command=command, time=time, experiment=experiment)
 
         self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
         self.gtime_columns = (
             "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
             "fs_outputs"
         )
-        self.wrapper = lambda: f'{time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
+        self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
 
     def _parse_result(self):
         with open(self.current_tmp_fn()) as tmp_fo:
@@ -178,14 +172,14 @@ class GnuTime(AbstractTime):
 
 class MacTime(AbstractTime):
 
-    def __init__(self, cmd, experiment=None):
-        super().__init__(cmd=cmd, experiment=experiment)
+    def __init__(self, command, experiment=None):
+        super().__init__(command=command, time="/usr/bin/env time", experiment=experiment)
         if sys.platform == "darwin":
             time_command = "/usr/bin/env time"
         else:
             raise Exception(f"Unsupported OS ({sys.platform})")
 
-        self.wrapper = lambda: f'{time_command} -o {self.current_tmp_fn()} -l -p'
+        self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -l -p'
 
     def _read_mactime_dict(self):
         d = collections.OrderedDict()
@@ -201,7 +195,7 @@ class MacTime(AbstractTime):
 
     def _parse_result(self):
         d = self._read_mactime_dict()
-        print(d)
+        #print(d)
         self.current_result.set("real_s", d["real"])
         self.current_result.set("user_s", d["user"])
         self.current_result.set("sys_s", d["sys"])
@@ -212,7 +206,7 @@ class MacTime(AbstractTime):
         #    self.current_result[k] = v
 
 
-def run(log_file, command, experiment):
+def run_timing(log_file, command, experiment, gtime):
     """
     Run a benchmarking command and log the results.
 
@@ -220,6 +214,7 @@ def run(log_file, command, experiment):
         log_file (str): The path to the log file where the results will be logged.
         experiment (str): Optional experiment name to include in the log.
         command (str): The benchmarking command to run.
+        gtime (bool): Whether to use gtime as a command
 
     Raises:
         subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
@@ -227,11 +222,22 @@ def run(log_file, command, experiment):
     Returns:
         None
     """
-    t = GnuTime(command, experiment)
-    #t = MacTime(command, experiment)
+
+    platf = sys.platform
+    # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
+    if gtime:
+        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime")
+    else:
+        if platf == "linux":
+            t = GnuTime(command=command, experiment=experiment)
+        elif platf == "darwin":
+            t = MacTime(command=command, experiment=experiment)
+        else:
+            raise Exception(f"Unsupported OS ({platf})")
+
     t.run()
 
-    if log_file == "stdout":
+    if log_file == "stdout" or log_file == "-":
         print(t)
     elif log_file == "stderr":
         print(t, file=sys.stderr)
@@ -299,8 +305,12 @@ def main():
     )
 
     parser.add_argument(
+        '-g', '--gtime', dest='gtime', action='store_true', help=f'call gtime instead of time'
+    )
+
+    parser.add_argument(
         '-l', '--log', dest='log', metavar='FILE', default=DEFAULT_L,
-        help=f'output benchmarking file (or stderr/stdout) [{DEFAULT_L}]'
+        help=f'output (filename/stderr/stdout) [{DEFAULT_L}]'
     )
 
     parser.add_argument(
@@ -309,7 +319,10 @@ def main():
     )
 
     args = parser.parse_args()
-    run(log_file=args.log, experiment=args.experiment, command=args.command)
+
+    run_timing(
+        log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime
+    )
 
 
 if __name__ == "__main__":
