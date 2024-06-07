@@ -47,9 +47,8 @@ Installation
 Dependencies
 ~~~~~~~~~~~~
 
-Galitime has no dependencies beyond Python 3. However, on OS X
-it requires the GNU version of the :code:`time` command (:code:`gtime`),
-which can be installed by :code:`brew install gnu-time`.
+Galitime has no dependencies beyond Python 3. While it used to require gtime on OS X, this dependency is no
+longer required and the default time command is used.
 
 
 Using Bioconda
