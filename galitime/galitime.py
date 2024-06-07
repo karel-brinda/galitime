@@ -9,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 
+from abc import ABC, abstractmethod
+
 from pathlib import Path
 
 PROGRAM = 'galitime'
@@ -24,77 +26,198 @@ except ImportError:
 DEFAULT_L = "stderr"
 
 
-def get_time_command():
-    """
-    Returns the appropriate time command based on the operating system.
+class TimingResult:
 
-    Returns:
-        str: The time command to be used.
+    def __init__(self, experiment=None, run=None, command=None):
+        """Setup all the fields
+        """
+        self._data = collections.OrderedDict()
 
-    Raises:
-        Exception: If the operating system is not supported.
-    """
-    if sys.platform == "linux":
-        time_command = "/usr/bin/time"
-    elif sys.platform == "darwin":
-        time_command = "gtime"
-    else:
-        raise Exception("Unsupported OS")
-    return time_command
+        # 1. prefill table with the mandatory fields in the right order
+        mandatory_columns = (
+            "experiment", "run", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu",
+            "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
+        )
+        for x in mandatory_columns:
+            self.add(x, None)
+
+        # 2. insert experiment parameters
+        self.set('experiment', experiment)
+        self.set('run', run)
+        self.set('command', command)
+
+    def bin_to_si(self, key):
+        self._data[key] = int(round(int(self._data[key]) * 1.024))
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    #def __setitem__(self, key, value):
+    #    assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
+    #    self._data[key] = value
+
+    def set(self, key, value):
+        assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
+        self._data[key] = value
+
+    def add(self, key, value):
+        assert key not in self._data, f"The key '{key}' is already in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
+        self._data[key] = value
+
+    def __delitem__(self, key):
+        del self._data[key]
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __repr__(self):
+        return repr(self._data)
+
+    def __str__(self):
+        return "\t".join(map(str, self._data.keys())
+                         ) + "\n" + "\t".join(map(str, self._data.values()))
 
 
-def run_single_instance(command, experiment):
+class AbstractTime(ABC):
 
-    d = collections.OrderedDict()
+    def __init__(self, command, experiment, time):
+        self.time_command = time
+        self.experiment = experiment
+        self.command = command
+        self.command_simpl = " ".join(command.replace("\\\n", " ").strip().split())
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.results = []  # all processed results
+        self.current_i = 0
+        self.current_result = None  # currrent result
 
-    # 1) experiment name (if user-specified)
-    if experiment:
-        d['experiment'] = experiment
+    def __del__(self):
+        self.tmp_dir.cleanup()
 
-    # 2) GNU time measurements
-    header = [
-        "real(s)", "sys(s)", "user(s)", "percent_CPU", "max_RAM(kb)", "FS_inputs", "FS_outputs",
-        "elapsed_time_alt(s)"
-    ]
+    # TODO: add possibility to set up multiple repetitions
+    def run(self, times=1):
+        """The main loop
+        """
+        for i in range(times):
+            self.current_i += 1
+            run = None if times == 1 else self.current_i
+            self.current_result = TimingResult(
+                experiment=self.experiment, run=run, command=self.command_simpl
+            )
+            self._execute_time()
+            self._parse_result()
+            self._save_result()
 
-    with tempfile.TemporaryDirectory() as dir_fn:
-        tmp_fn = os.path.join(dir_fn, "gtime_output.txt")
-        gtime_columns = (
+    def current_tmp_fn(self):
+        return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
+
+    def _execute_time(self):
+        """Execute time, whatever command it is
+        """
+        # TODO: change to /usr/bin/env bash
+        wrapped_command = f'{self.wrapper()} {self.command}'
+        #print(f"Running '{wrapped_command}'")
+        main_process = subprocess.Popen(wrapped_command, shell=True, executable='/bin/bash')
+
+        #TODO: integrate timeout into the whole method
+        timeout = None
+        start_time = datetime.datetime.now()
+        try:
+            exit_code = main_process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            exit_code = -1  # timeout
+        end_time = datetime.datetime.now()
+        self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
+        self.current_result.set("exit_code", exit_code)
+
+        # TODO: different treating based on the expected behaviour
+        if exit_code:
+            raise subprocess.CalledProcessError(
+                exit_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
+            )
+
+    @abstractmethod
+    def _parse_result(self):
+        pass
+
+    def _save_result(self):
+        self.results.append(self.current_result)
+        self.current_result = None
+
+    def __str__(self):
+        lines = "\n".join([str(x) for x in self.results]).split("\n")
+        seen = set()
+        unique_list = []
+        for x in lines:
+            if x not in seen:
+                seen.add(x)
+                unique_list.append(x)
+        return "\n".join(unique_list)
+
+
+class GnuTime(AbstractTime):
+
+    def __init__(self, command, time="/usr/bin/env time", experiment=None):
+        super().__init__(command=command, time=time, experiment=experiment)
+
+        self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
+        self.gtime_columns = (
             "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
             "fs_outputs"
         )
-        gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
-        benchmark_wrapper = f'{get_time_command()} -o {tmp_fn} -f "{gtime_columns_spec}"'
+        self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
 
-        start_time = datetime.datetime.now()
-        main_process = subprocess.Popen(
-            f'{benchmark_wrapper} {command}', shell=True, executable='/bin/bash'
-        )
-        return_code = main_process.wait()
-        end_time = datetime.datetime.now()
-
-        if return_code:
-            raise subprocess.CalledProcessError(
-                return_code, main_process.args, output=main_process.stdout,
-                stderr=main_process.stderr
-            )
-
-        with open(tmp_fn) as tmp_fo:
+    def _parse_result(self):
+        with open(self.current_tmp_fn()) as tmp_fo:
             gtime_output_values = tmp_fo.readline().strip().split("\t")
-
-    for k, v in zip(gtime_columns, gtime_output_values):
-        d[k] = v
-
-    # 3) elapsed time
-    d["real_s_alt"] = str((end_time - start_time).total_seconds())
-
-    # 4) formatted command
-    d["command"] = " ".join(command.replace("\\\n", " ").strip().split())
-
-    return d
+        for k, v in zip(self.gtime_columns, gtime_output_values):
+            self.current_result.set(k, v)
+        self.current_result.bin_to_si("max_ram_kb")
 
 
-def run(log_file, command, experiment):
+class MacTime(AbstractTime):
+
+    def __init__(self, command, experiment=None):
+        super().__init__(command=command, time="/usr/bin/env time", experiment=experiment)
+        if sys.platform == "darwin":
+            time_command = "/usr/bin/env time"
+        else:
+            raise Exception(f"Unsupported OS ({sys.platform})")
+
+        self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -l -p'
+
+    def _read_mactime_dict(self):
+        d = collections.OrderedDict()
+        with open(self.current_tmp_fn()) as tmp_fo:
+            for x in tmp_fo:
+                x = x.strip()
+                v, k = x.split(maxsplit=1)
+                if v in ["real", "user", "sys"]:
+                    kk = v
+                    vv = k
+                else:
+                    kk = k
+                    vv = v
+                if vv.isdigit():
+                    vvv = int(vv)
+                else:
+                    vvv = vv
+                d[kk] = vvv
+        return d
+
+    def _parse_result(self):
+        d = self._read_mactime_dict()
+        #print(d)
+        self.current_result.set("real_s", d["real"])
+        self.current_result.set("user_s", d["user"])
+        self.current_result.set("sys_s", d["sys"])
+        self.current_result.set("max_ram_kb", int(round(d["maximum resident set size"] / 1000)))
+        self.current_result.add("max_ram_kb_alt", int(round(d["peak memory footprint"] / 1000)))
+
+        #for k, v in zip(self.gtime_columns, gtime_output_values):
+        #    self.current_result[k] = v
+
+
+def run_timing(log_file, command, experiment, gtime):
     """
     Run a benchmarking command and log the results.
 
@@ -102,6 +225,7 @@ def run(log_file, command, experiment):
         log_file (str): The path to the log file where the results will be logged.
         experiment (str): Optional experiment name to include in the log.
         command (str): The benchmarking command to run.
+        gtime (bool): Whether to use gtime as a command
 
     Raises:
         subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
@@ -109,18 +233,29 @@ def run(log_file, command, experiment):
     Returns:
         None
     """
-    d = run_single_instance(command, experiment)
 
-    output = "\t".join(d.keys()) + "\n" + "\t".join(d.values())
+    platf = sys.platform
+    # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
+    if gtime:
+        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime")
+    else:
+        if platf == "linux":
+            t = GnuTime(command=command, experiment=experiment)
+        elif platf == "darwin":
+            t = MacTime(command=command, experiment=experiment)
+        else:
+            raise Exception(f"Unsupported OS ({platf})")
 
-    if log_file == "stdout":
-        print(output)
+    t.run()
+
+    if log_file == "stdout" or log_file == "-":
+        print(t)
     elif log_file == "stderr":
-        print(output, file=sys.stderr)
+        print(t, file=sys.stderr)
     else:
         Path(log_file).parent.mkdir(parents=True, exist_ok=True)
         with open(log_file, "w") as fo:
-            print(output, file=fo)
+            print(t, file=fo)
 
 
 def main():
@@ -181,8 +316,12 @@ def main():
     )
 
     parser.add_argument(
+        '-g', '--gtime', dest='gtime', action='store_true', help=f'call gtime instead of time'
+    )
+
+    parser.add_argument(
         '-l', '--log', dest='log', metavar='FILE', default=DEFAULT_L,
-        help=f'output benchmarking file (or stderr/stdout) [{DEFAULT_L}]'
+        help=f'output (filename/stderr/stdout) [{DEFAULT_L}]'
     )
 
     parser.add_argument(
@@ -191,7 +330,10 @@ def main():
     )
 
     args = parser.parse_args()
-    run(log_file=args.log, experiment=args.experiment, command=args.command)
+
+    run_timing(
+        log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime
+    )
 
 
 if __name__ == "__main__":
