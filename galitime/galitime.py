@@ -27,6 +27,8 @@ DEFAULT_L = "stderr"
 DEFAULT_r = 1
 
 
+# IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
+# the integers being converted to int from str
 class TimingResult:
 
     def __init__(self, experiment=None, run=None, command=None):
@@ -90,6 +92,7 @@ class AbstractTime(ABC):
         self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
+        self.final_exit_code = 0
 
     def __del__(self):
         self.tmp_dir.cleanup()
@@ -104,9 +107,23 @@ class AbstractTime(ABC):
             self.current_result = TimingResult(
                 experiment=self.experiment, run=run, command=self.command_simpl
             )
+
             self._execute_time()
             self._parse_result()
             self._save_result()
+
+            exit_code = int(self.current_result['exit_code'])
+            if exit_code != 0:
+                print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
+                self.final_exit_code = exit_code
+                break
+            #
+            # TODO: Add error treatment based on the user pre-specified failure mode
+            # See https://github.com/karel-brinda/galitime/issues/25
+            #
+
+    def get_final_exit_code(self):
+        return self.final_exit_code
 
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
@@ -114,35 +131,33 @@ class AbstractTime(ABC):
     def _execute_time(self):
         """Execute time, whatever command it is
         """
-        # TODO: change to /usr/bin/env bash
+
         wrapped_command = f'{self.wrapper()} {self.command}'
         #print(f"Running '{wrapped_command}'")
+
+        # TODO: change to /usr/bin/env bash
         main_process = subprocess.Popen(wrapped_command, shell=True, executable='/bin/bash')
 
         #TODO: integrate timeout into the whole method
         timeout = None
         start_time = datetime.datetime.now()
         try:
-            exit_code = main_process.wait(timeout=timeout)
+            # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
+            exit_code = int(main_process.wait(timeout=timeout))
         except subprocess.TimeoutExpired:
             exit_code = -1  # timeout
         end_time = datetime.datetime.now()
         self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
         self.current_result.set("exit_code", exit_code)
 
-        # TODO: different treating based on the expected behaviour
-        if exit_code:
-            raise subprocess.CalledProcessError(
-                exit_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
-            )
-
+        ## TODO: different treating based on the expected behaviour
+        
     @abstractmethod
     def _parse_result(self):
         pass
 
     def _save_result(self):
         self.results.append(self.current_result)
-        self.current_result = None
 
     def __str__(self):
         lines = "\n".join([str(x) for x in self.results]).split("\n")
@@ -228,9 +243,6 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         command (str): The benchmarking command to run.
         gtime (bool): Whether to use gtime as a command
 
-    Raises:
-        subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
-
     Returns:
         None
     """
@@ -258,14 +270,13 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         with open(log_file, "w") as fo:
             print(t, file=fo)
 
+    return t.get_final_exit_code()
+
 
 def main():
     """
     The main function of the script. It parses the command line arguments, runs the benchmarking command,
     and logs the results.
-
-    Raises:
-        subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
     """
 
     class CustomArgumentParser(argparse.ArgumentParser):
@@ -337,11 +348,14 @@ def main():
 
     args = parser.parse_args()
 
-    run_timing(
+    r = run_timing(
         log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
         repetitions=args.reps
     )
 
+    return r
+
 
 if __name__ == "__main__":
-    main()
+    r = main()
+    sys.exit(r)
