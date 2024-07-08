@@ -90,6 +90,7 @@ class AbstractTime(ABC):
         self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
+        self.final_error_code = 0
 
     def __del__(self):
         self.tmp_dir.cleanup()
@@ -104,9 +105,24 @@ class AbstractTime(ABC):
             self.current_result = TimingResult(
                 experiment=self.experiment, run=run, command=self.command_simpl
             )
+
             self._execute_time()
             self._parse_result()
             self._save_result()
+
+            if self.current_result['exit_code'] != 0:
+                print(
+                    f"Galitime error: exit code of the command is not zero ({self.current_result['exit_code']})",
+                    file=sys.stderr
+                )
+                self.final_error_code = self.current_result['exit_code']
+                break
+            # TODO: Add error treatment based on the user pre-specified failure mode
+
+            self._reset_current_result
+
+    def get_final_error_code(self):
+        return self.final_error_code
 
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
@@ -130,11 +146,11 @@ class AbstractTime(ABC):
         self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
         self.current_result.set("exit_code", exit_code)
 
-        # TODO: different treating based on the expected behaviour
-        if exit_code:
-            raise subprocess.CalledProcessError(
-                exit_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
-            )
+        ## TODO: different treating based on the expected behaviour
+        #if exit_code:
+        #    raise subprocess.CalledProcessError(
+        #        exit_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
+        #    )
 
     @abstractmethod
     def _parse_result(self):
@@ -142,6 +158,8 @@ class AbstractTime(ABC):
 
     def _save_result(self):
         self.results.append(self.current_result)
+
+    def _reset_current_result(self):
         self.current_result = None
 
     def __str__(self):
@@ -258,6 +276,8 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         with open(log_file, "w") as fo:
             print(t, file=fo)
 
+    return t.get_final_error_code()
+
 
 def main():
     """
@@ -337,11 +357,14 @@ def main():
 
     args = parser.parse_args()
 
-    run_timing(
+    r = run_timing(
         log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
         repetitions=args.reps
     )
 
+    return r
+
 
 if __name__ == "__main__":
-    main()
+    r = main()
+    sys.exit(r)
