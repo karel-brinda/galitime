@@ -54,7 +54,7 @@ class TimingResult:
         if key == "exit_code":
             value=self._data[key]
             print("Getting exit code", type(value), value)
-            assert value is not int, f"exit code {value}, {type(value)} is not int"
+            assert value is int, f"exit code {value}, {type(value)} is not int"
         return self._data[key]
 
     #def __setitem__(self, key, value):
@@ -65,7 +65,7 @@ class TimingResult:
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
         if key == "exit_code":
             print("Setting exit code", value, type(value))
-            assert value is not int, f"exit code {value}, {type(value)} is not int"
+            assert value is int, f"exit code {value}, {type(value)} is not int"
         self._data[key] = value
 
     def add(self, key, value):
