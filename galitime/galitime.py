@@ -120,7 +120,6 @@ class AbstractTime(ABC):
             # See https://github.com/karel-brinda/galitime/issues/25
             #
 
-            self._reset_current_result
 
     def get_final_exit_code(self):
         return self.final_exit_code
@@ -131,9 +130,12 @@ class AbstractTime(ABC):
     def _execute_time(self):
         """Execute time, whatever command it is
         """
-        # TODO: change to /usr/bin/env bash
+        self.current_result = None
+
         wrapped_command = f'{self.wrapper()} {self.command}'
         #print(f"Running '{wrapped_command}'")
+
+        # TODO: change to /usr/bin/env bash
         main_process = subprocess.Popen(wrapped_command, shell=True, executable='/bin/bash')
 
         #TODO: integrate timeout into the whole method
@@ -160,9 +162,6 @@ class AbstractTime(ABC):
 
     def _save_result(self):
         self.results.append(self.current_result)
-
-    def _reset_current_result(self):
-        self.current_result = None
 
     def __str__(self):
         lines = "\n".join([str(x) for x in self.results]).split("\n")
