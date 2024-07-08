@@ -140,7 +140,8 @@ class AbstractTime(ABC):
         timeout = None
         start_time = datetime.datetime.now()
         try:
-            exit_code = main_process.wait(timeout=timeout)
+            # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
+            exit_code = int(main_process.wait(timeout=timeout))
         except subprocess.TimeoutExpired:
             exit_code = -1  # timeout
         end_time = datetime.datetime.now()
