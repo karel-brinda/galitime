@@ -5,6 +5,7 @@ import collections
 import datetime
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -23,8 +24,10 @@ try:
 except ImportError:
     VERSION = "(version NA)"
 
-DEFAULT_L = "stderr"
+DEFAULT_l = "stderr"
 DEFAULT_r = 1
+DEFAULT_s = '/usr/bin/env bash'
+DEFAULT_s = shutil.which('bash')
 
 
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
@@ -83,8 +86,9 @@ class TimingResult:
 
 class AbstractTime(ABC):
 
-    def __init__(self, command, experiment, time):
+    def __init__(self, command, shell, experiment, time):
         self.time_command = time
+        self.shell = shell
         self.experiment = experiment
         self.command = command
         self.command_simpl = " ".join(command.replace("\\\n", " ").strip().split())
@@ -135,8 +139,7 @@ class AbstractTime(ABC):
         wrapped_command = f'{self.wrapper()} {self.command}'
         #print(f"Running '{wrapped_command}'")
 
-        # TODO: change to /usr/bin/env bash
-        main_process = subprocess.Popen(wrapped_command, shell=True, executable='/bin/bash')
+        main_process = subprocess.Popen(wrapped_command, shell=True, executable=self.shell)
 
         #TODO: integrate timeout into the whole method
         timeout = None
@@ -151,7 +154,7 @@ class AbstractTime(ABC):
         self.current_result.set("exit_code", exit_code)
 
         ## TODO: different treating based on the expected behaviour
-        
+
     @abstractmethod
     def _parse_result(self):
         pass
@@ -172,8 +175,8 @@ class AbstractTime(ABC):
 
 class GnuTime(AbstractTime):
 
-    def __init__(self, command, time="/usr/bin/env time", experiment=None):
-        super().__init__(command=command, time=time, experiment=experiment)
+    def __init__(self, command, shell, time="/usr/bin/env time", experiment=None):
+        super().__init__(command=command, time=time, shell=shell, experiment=experiment)
 
         self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
         self.gtime_columns = (
@@ -192,8 +195,10 @@ class GnuTime(AbstractTime):
 
 class MacTime(AbstractTime):
 
-    def __init__(self, command, experiment=None):
-        super().__init__(command=command, time="/usr/bin/env time", experiment=experiment)
+    def __init__(self, command, shell, experiment=None):
+        super().__init__(
+            command=command, time="/usr/bin/env time", shell=shell, experiment=experiment
+        )
         if sys.platform == "darwin":
             time_command = "/usr/bin/env time"
         else:
@@ -233,7 +238,7 @@ class MacTime(AbstractTime):
         #    self.current_result[k] = v
 
 
-def run_timing(log_file, command, experiment, gtime, repetitions):
+def run_timing(log_file, command, shell, experiment, gtime, repetitions):
     """
     Run a benchmarking command and log the results.
 
@@ -241,7 +246,8 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         log_file (str): The path to the log file where the results will be logged.
         experiment (str): Optional experiment name to include in the log.
         command (str): The benchmarking command to run.
-        gtime (bool): Whether to use gtime as a command
+        shell (str): Shell for execution.
+        gtime (bool): Whether to use gtime as a command.
 
     Returns:
         None
@@ -253,9 +259,9 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime")
     else:
         if platf == "linux":
-            t = GnuTime(command=command, experiment=experiment)
+            t = GnuTime(command=command, experiment=experiment, shell=shell)
         elif platf == "darwin":
-            t = MacTime(command=command, experiment=experiment)
+            t = MacTime(command=command, experiment=experiment, shell=shell)
         else:
             raise Exception(f"Unsupported OS ({platf})")
 
@@ -328,29 +334,35 @@ def main():
     )
 
     parser.add_argument(
-        '-r', '--repetitions', dest='reps', metavar='INT', type=int, default=DEFAULT_r,
+        '-r', '--reps', dest='reps', metavar='INT', type=int, default=DEFAULT_r,
         help=f'number of repetitions [{DEFAULT_r}]'
     )
 
     parser.add_argument(
-        '-g', '--gtime', dest='gtime', action='store_true', help=f'call gtime instead of time'
+        '-g', '--gtime', dest='gtime', action='store_true',
+        help=f'call gtime instead of time (useful on MacOS)'
     )
 
     parser.add_argument(
-        '-l', '--log', dest='log', metavar='FILE', default=DEFAULT_L,
-        help=f'output (filename/stderr/stdout) [{DEFAULT_L}]'
+        '-l', '--log', dest='log', metavar='FILE', default=DEFAULT_l,
+        help=f'output (filename/stderr/stdout) [{DEFAULT_l}]'
     )
 
     parser.add_argument(
-        '-n', '--name', metavar='STR', help='name of the experiment', dest='experiment',
-        default=None
+        '-n', '--name', metavar='STR', help='name of the experiment (for output)',
+        dest='experiment', default=None
+    )
+
+    parser.add_argument(
+        '-s', '--shell', metavar='STR', help=f'shell for execution [{DEFAULT_s}]',
+        default=DEFAULT_s, dest='shell'
     )
 
     args = parser.parse_args()
 
     r = run_timing(
         log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
-        repetitions=args.reps
+        shell=args.shell, repetitions=args.reps
     )
 
     return r
