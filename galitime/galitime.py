@@ -120,7 +120,6 @@ class AbstractTime(ABC):
             # See https://github.com/karel-brinda/galitime/issues/25
             #
 
-
     def get_final_exit_code(self):
         return self.final_exit_code
 
@@ -130,7 +129,6 @@ class AbstractTime(ABC):
     def _execute_time(self):
         """Execute time, whatever command it is
         """
-        self.current_result = None
 
         wrapped_command = f'{self.wrapper()} {self.command}'
         #print(f"Running '{wrapped_command}'")
