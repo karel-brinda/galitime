@@ -60,8 +60,8 @@ class TimingResult:
     def set(self, key, value):
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
         if key == "exit_code":
-            print("Setting exit code", value)
-            assert value is str
+            print("Setting exit code", value, type(value))
+            assert value is int, f"exit code {value}, {type(value)} is not int"
         self._data[key] = value
 
     def add(self, key, value):
