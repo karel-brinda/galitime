@@ -149,11 +149,7 @@ class AbstractTime(ABC):
         self.current_result.set("exit_code", exit_code)
 
         ## TODO: different treating based on the expected behaviour
-        #if exit_code:
-        #    raise subprocess.CalledProcessError(
-        #        exit_code, main_process.args, output=main_process.stdout, stderr=main_process.stderr
-        #    )
-
+        
     @abstractmethod
     def _parse_result(self):
         pass
@@ -245,9 +241,6 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         command (str): The benchmarking command to run.
         gtime (bool): Whether to use gtime as a command
 
-    Raises:
-        subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
-
     Returns:
         None
     """
@@ -282,9 +275,6 @@ def main():
     """
     The main function of the script. It parses the command line arguments, runs the benchmarking command,
     and logs the results.
-
-    Raises:
-        subprocess.CalledProcessError: If the benchmarking command returns a non-zero exit code.
     """
 
     class CustomArgumentParser(argparse.ArgumentParser):
