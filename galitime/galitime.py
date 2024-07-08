@@ -90,7 +90,7 @@ class AbstractTime(ABC):
         self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
-        self.final_error_code = 0
+        self.final_exit_code = 0
 
     def __del__(self):
         self.tmp_dir.cleanup()
@@ -110,14 +110,10 @@ class AbstractTime(ABC):
             self._parse_result()
             self._save_result()
 
-            if int(self.current_result['exit_code']) != 0:
-                print(self.current_result['exit_code'])
-                print(self.current_result['exit_code'])
-                print(
-                    f"Galitime error: exit code of the command is not zero ({self.current_result['exit_code']})",
-                    file=sys.stderr
-                )
-                self.final_error_code = self.current_result['exit_code']
+            exit_code = self.current_result['exit_code']
+            if exit_code != 0:
+                print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
+                self.final_exit_code = exit_code
                 break
             #
             # TODO: Add error treatment based on the user pre-specified failure mode
@@ -126,8 +122,8 @@ class AbstractTime(ABC):
 
             self._reset_current_result
 
-    def get_final_error_code(self):
-        return self.final_error_code
+    def get_final_exit_code(self):
+        return self.final_exit_code
 
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
@@ -281,7 +277,7 @@ def run_timing(log_file, command, experiment, gtime, repetitions):
         with open(log_file, "w") as fo:
             print(t, file=fo)
 
-    return t.get_final_error_code()
+    return t.get_final_exit_code()
 
 
 def main():
