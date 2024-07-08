@@ -51,6 +51,10 @@ class TimingResult:
         self._data[key] = int(round(int(self._data[key]) * 1.024))
 
     def __getitem__(self, key):
+        if key == "exit_code":
+            value=self._data[key]
+            print("Getting exit code", type(value), value)
+            assert value is not int, f"exit code {value}, {type(value)} is not int"
         return self._data[key]
 
     #def __setitem__(self, key, value):
