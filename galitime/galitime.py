@@ -111,13 +111,17 @@ class AbstractTime(ABC):
             self._save_result()
 
             if self.current_result['exit_code'] != 0:
+                print(self.current_result['exit_code'])
                 print(
                     f"Galitime error: exit code of the command is not zero ({self.current_result['exit_code']})",
                     file=sys.stderr
                 )
                 self.final_error_code = self.current_result['exit_code']
                 break
+            #
             # TODO: Add error treatment based on the user pre-specified failure mode
+            # See https://github.com/karel-brinda/galitime/issues/25
+            #
 
             self._reset_current_result
 
