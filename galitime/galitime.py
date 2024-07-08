@@ -112,6 +112,7 @@ class AbstractTime(ABC):
 
             exit_code = self.current_result['exit_code']
             if exit_code != 0:
+                assert exit_code==0, [type(exit_code), type(0), exit_code]
                 print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
                 self.final_exit_code = exit_code
                 break
