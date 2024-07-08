@@ -110,7 +110,8 @@ class AbstractTime(ABC):
             self._parse_result()
             self._save_result()
 
-            if self.current_result['exit_code'] != 0:
+            if int(self.current_result['exit_code']) != 0:
+                print(self.current_result['exit_code'])
                 print(self.current_result['exit_code'])
                 print(
                     f"Galitime error: exit code of the command is not zero ({self.current_result['exit_code']})",
