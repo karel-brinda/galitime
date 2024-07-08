@@ -27,6 +27,8 @@ DEFAULT_L = "stderr"
 DEFAULT_r = 1
 
 
+# IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
+# the integers being converted to int from str
 class TimingResult:
 
     def __init__(self, experiment=None, run=None, command=None):
@@ -51,10 +53,6 @@ class TimingResult:
         self._data[key] = int(round(int(self._data[key]) * 1.024))
 
     def __getitem__(self, key):
-        if key == "exit_code":
-            value=self._data[key]
-            print("Getting exit code", type(value), value)
-            assert type(value) is int, f"exit code {value}, {type(value)} is not int"
         return self._data[key]
 
     #def __setitem__(self, key, value):
@@ -63,9 +61,6 @@ class TimingResult:
 
     def set(self, key, value):
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        if key == "exit_code":
-            print("Setting exit code", value, type(value))
-            assert type(value) is int, f"exit code {value}, {type(value)} is not int"
         self._data[key] = value
 
     def add(self, key, value):
@@ -117,9 +112,8 @@ class AbstractTime(ABC):
             self._parse_result()
             self._save_result()
 
-            exit_code = self.current_result['exit_code']
+            exit_code = int(self.current_result['exit_code'])
             if exit_code != 0:
-                assert exit_code==0, [type(exit_code), type(0), exit_code]
                 print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
                 self.final_exit_code = exit_code
                 break
