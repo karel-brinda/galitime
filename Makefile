@@ -35,7 +35,6 @@ clean: ## Clean
 	$(MAKE) -C tests clean
 
 install: ## Install using PIP
-install: hooks
 	$(PIP) uninstall -y galitime || true
 	$(PIP) install .
 
@@ -101,4 +100,3 @@ depconda: ## Install dependencies using Conda
 
 deppip: ## Install dependencies using PIP
 	cat requirements.txt | xargs $(PIP) install
-

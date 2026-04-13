@@ -20,7 +20,7 @@ exec(open("galitime/version.py").read())
 setuptools.setup(
     name='galitime',
     version=VERSION,
-    description='description',
+    description='Benchmark shell commands and record normalized timing metrics',
     long_description=long_description,
     url='https://github.com/karel-brinda/galitime',
     author='Karel Brinda',
@@ -37,9 +37,7 @@ setuptools.setup(
     ],
     keywords='',
     packages=["galitime"],
-    install_requires=[
-        'wheel',
-    ],
+    install_requires=[],
     package_data={
         'galitime': [
             '*.py',
