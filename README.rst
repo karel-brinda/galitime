@@ -86,6 +86,12 @@ CLI
 
 .. code-block:: text
 
+    $ galitime -h
+
+    Program: galitime (benchmarking of computational experiments using GNU time)
+    Version: 0.2.0
+    Contact: Karel Brinda <karel.brinda@inria.fr>
+
     usage: galitime [-r INT] [-g] [-l FILE] [-n STR] [-s STR] command
 
     positional arguments:
