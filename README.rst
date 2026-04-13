@@ -23,21 +23,27 @@ a simple tab-delimited format. It wraps the system ``time`` command, normalizes 
 output into stable column names, and can repeat commands for multiple runs.
 
 
-
-Quick example
+Quick Example
 -------------
+
+Install from PyPI:
 
 .. code-block:: bash
 
-    $ if [[ $(uname) == "Darwin" ]]; then brew install gnu-time; fi
-    $ conda install -y -c bioconda -c conda-forge galitime
+    if [[ $(uname) == "Darwin" ]]; then brew install gnu-time; fi
+    pip install -U galitime
 
-    $ galitime -l time.log ls
+Benchmark a command and print the result to standard output:
 
-    $ cat time.log
-    experiment  run real_s  real_s_py   user_s  sys_s   percent_cpu max_ram_kb  fs_inputs   fs_outputs  exit_code   command
-    None    None    0.03    0.03    0.00    0.00    10% 2904    0   0   0   ls
+.. code-block:: bash
 
+    galitime --gtime -l stdout "sleep 0.1"
+
+Write the benchmark output to a file:
+
+.. code-block:: bash
+
+    galitime --log time.log ls
 
 
 Installation
@@ -78,7 +84,6 @@ Using PyPI
 CLI
 ---
 
-
 .. code-block:: text
 
     $ galitime -h
@@ -102,26 +107,39 @@ CLI
       -s, --shell STR  shell for execution [/bin/bash]
 
 
-Output columns
+Output Columns
 --------------
 
 ``galitime`` writes tab-delimited output with these columns:
 
-* ``experiment`` - Experiment name supplied with ``-n/--name``
-* ``run`` - Repetition number when ``-r/--reps`` is greater than 1
-* ``real_s`` - Wall-clock time reported by ``time``, in seconds
-* ``real_s_py`` - Wall-clock time measured by Python around the whole execution
-* ``user_s`` - User CPU time in seconds
-* ``sys_s`` - System CPU time in seconds
-* ``percent_cpu`` - CPU usage percentage reported by ``time``
-* ``max_ram_kb`` - Maximum resident memory in kilobytes
-* ``fs_inputs`` - File system input operations
-* ``fs_outputs`` - File system output operations
-* ``exit_code`` - Exit status of the benchmarked command
-* ``command`` - Normalized command string that was executed
+* ``experiment``: experiment name supplied with ``-n/--name``; otherwise empty
+* ``run``: repetition number when ``-r/--reps`` is greater than 1; otherwise empty
+* ``real_s``: wall-clock time reported by ``time``, in seconds
+* ``real_s_py``: wall-clock time measured by Python around the whole execution
+* ``user_s``: user CPU time in seconds
+* ``sys_s``: system CPU time in seconds
+* ``percent_cpu``: CPU usage percentage reported by ``time``
+* ``max_ram_kb``: maximum resident memory in kilobytes
+* ``fs_inputs``: file system input operations
+* ``fs_outputs``: file system output operations
+* ``exit_code``: exit status of the benchmarked command
+* ``command``: normalized command string that was executed
 
 
+Development
+-----------
 
+Repository layout:
+
+* ``galitime/``: package source and CLI entry point
+* ``tests/``: Makefile-based smoke tests
+
+Common local commands:
+
+.. code-block:: bash
+
+    make install
+    make test
 
 
 Issues
