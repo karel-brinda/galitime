@@ -20,12 +20,18 @@ exec(open("galitime/version.py").read())
 setuptools.setup(
     name='galitime',
     version=VERSION,
-    description='Benchmark shell commands and record normalized timing metrics',
+    description='Benchmark shell commands and capture normalized timing metrics',
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     url='https://github.com/karel-brinda/galitime',
+    project_urls={
+        'Source': 'https://github.com/karel-brinda/galitime',
+        'Issues': 'https://github.com/karel-brinda/galitime/issues',
+    },
     author='Karel Brinda',
     author_email='karel.brinda@inria.fr',
     license='MIT',
+    python_requires='>=3.7',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3 :: Only',
@@ -35,7 +41,7 @@ setuptools.setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
     ],
-    keywords='',
+    keywords='benchmark timing performance cli gnu-time',
     packages=["galitime"],
     install_requires=[],
     package_data={
