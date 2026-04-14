@@ -1,4 +1,4 @@
-.PHONY: all help clean cleanall view
+.PHONY: all help mac clean
 
 SHELL=/usr/bin/env bash -eo pipefail
 
@@ -14,6 +14,16 @@ all:
 	../../galitime --log time.log ls
 	((../../galitime ls >/dev/null) 2>&1) > time2.log
 	../../galitime -r 5 --log time3.log "sleep 0.1"
+	@if [[ "$$(uname)" == "Darwin" ]]; then \
+		$(MAKE) mac; \
+	fi
+
+mac:
+	@command -v gtime >/dev/null
+	../../galitime --gtime --log time_gtime.log "true"
+	@grep -q '^experiment$$' time_gtime.log'
+	@grep -q $'\t0\ttrue$$' time_gtime.log
+
 
 help: ## Print help messages
 	@echo -e "$$(grep -hE '^\S*(:.*)?##' $(MAKEFILE_LIST) \
@@ -27,7 +37,3 @@ help: ## Print help messages
 
 clean: ## Clean
 	rm -f *.log
-
-cleanall: clean ## Clean all
-
-view: ## View output
