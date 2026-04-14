@@ -15,7 +15,7 @@
 These are intentional design decisions. Do not change them unless explicitly asked.
 
 - Version metadata is intentionally stored in `galitime/galitime.py`; do not move or copy version constants elsewhere.
-- Do not refactor project layout for 'cleanliness' unless the task explicitly requests it.
+- Do not refactor project layout for "cleanliness" unless the task explicitly requests it.
 - Preserve public CLI behavior and import paths unless explicitly requested.
 - Prefer minimal patches over broad reorganization.
 
@@ -27,4 +27,4 @@ If it does, keep the invariant and implement the request around it.
 ## When unsure
 
 Default to preserving the existing pattern.
-Ask whether a convention is intentional only if the task is blocked by ambiguity.
+Ask: "Is this an intentional repository convention?" only if the task is blocked by ambiguity.
