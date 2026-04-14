@@ -4,6 +4,7 @@ import argparse
 import collections
 import datetime
 import os
+import shlex
 import re
 import shutil
 import subprocess
@@ -95,6 +96,13 @@ class AbstractTime(ABC):
     def __del__(self):
         self.tmp_dir.cleanup()
 
+    @staticmethod
+    def _normalize_exit_code(exit_code):
+        if exit_code < 0:
+            # SIGKILL shows up as -9 from wait(); shells conventionally report it as 137.
+            return 128 + (-exit_code)
+        return exit_code
+
     # TODO: add possibility to set up multiple repetitions
     def run(self, times=1):
         """The main loop
@@ -126,11 +134,19 @@ class AbstractTime(ABC):
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
 
+    def current_exit_code_fn(self):
+        return os.path.join(self.tmp_dir.name, f"exit_code.run_{self.current_i}.log")
+
     def _execute_time(self):
         """Execute time, whatever command it is
         """
 
-        wrapped_command = f'{self.wrapper()} {self.command}'
+        command_script = (
+            f'galitime_exit_code_file={shlex.quote(self.current_exit_code_fn())}; '
+            'trap \'printf "%s\\n" "$?" > "$galitime_exit_code_file"\' EXIT; '
+            f'{self.command}'
+        )
+        wrapped_command = f'{self.wrapper()} {shlex.quote(self.shell)} -c {shlex.quote(command_script)}'
         #print(f"Running '{wrapped_command}'")
 
         main_process = subprocess.Popen(wrapped_command, shell=True, executable=self.shell)
@@ -140,10 +156,19 @@ class AbstractTime(ABC):
         start_time = datetime.datetime.now()
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
-            exit_code = int(main_process.wait(timeout=timeout))
+            exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
         except subprocess.TimeoutExpired:
             exit_code = -1  # timeout
         end_time = datetime.datetime.now()
+        try:
+            with open(self.current_exit_code_fn()) as exit_code_fo:
+                exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
+        except FileNotFoundError:
+            exit_code_lines = []
+        if exit_code_lines:
+            if len(exit_code_lines) != 1:
+                raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
+            exit_code = int(exit_code_lines[0])
         self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
         self.current_result.set("exit_code", exit_code)
 
@@ -181,8 +206,19 @@ class GnuTime(AbstractTime):
 
     def _parse_result(self):
         with open(self.current_tmp_fn()) as tmp_fo:
-            gtime_output_values = tmp_fo.readline().strip().split("\t")
+            gtime_output_lines = [x.strip() for x in tmp_fo if x.strip()]
+        gtime_output_values = None
+        for line in reversed(gtime_output_lines):
+            values = line.split("\t")
+            if len(values) == len(self.gtime_columns):
+                gtime_output_values = values
+                break
+        if gtime_output_values is None:
+            raise RuntimeError(f"Unexpected GNU time output shape: {gtime_output_lines!r}")
+        # GNU time's %x is useful for metrics/debugging, but the shell wait status is the canonical exit code.
         for k, v in zip(self.gtime_columns, gtime_output_values):
+            if k == "exit_code":
+                continue
             self.current_result.set(k, v)
         self.current_result.bin_to_si("max_ram_kb")
 
