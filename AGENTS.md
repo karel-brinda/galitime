@@ -1,11 +1,21 @@
 # AGENTS.md
 
+## Repository rules
+
+- Keep patches minimal.
+- Do not change test expectations.
+- Prefer targeted fixes over refactors.
+- Treat subprocess/shell wait status as the canonical exit code.
+- GNU time output is for metrics only.
+- Run the smallest relevant test first, then re-run the failing test.
+- If parsing external tool output, validate shape and fail with an explicit error.
+
 ## Repository invariants
 
 These are intentional design decisions. Do not change them unless explicitly asked.
 
-- Version metadata is intentionally stored in `galitime/galitime.py`, do not move or copy version constants elsewhere.
-- Do not refactor project layout for "cleanliness" unless the task explicitly requests it.
+- Version metadata is intentionally stored in `galitime/galitime.py`; do not move or copy version constants elsewhere.
+- Do not refactor project layout for 'cleanliness' unless the task explicitly requests it.
 - Preserve public CLI behavior and import paths unless explicitly requested.
 - Prefer minimal patches over broad reorganization.
 
@@ -16,6 +26,5 @@ If it does, keep the invariant and implement the request around it.
 
 ## When unsure
 
-Ask: "Is this an intentional repository convention?"
-Default to preserving the existing pattern
-
+Default to preserving the existing pattern.
+Ask whether a convention is intentional only if the task is blocked by ambiguity.
