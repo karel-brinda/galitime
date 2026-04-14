@@ -24,5 +24,13 @@ except ValueError:
 
 actual = data[idx]
 if actual != EXPECTED:
-    print(f'expected exit_code={EXPECTED}, got {actual}', file=sys.stderr)
+    print(
+        f'failed: expected exit_code={EXPECTED} for SIGKILL (128+9), got {actual}',
+        file=sys.stderr,
+    )
     sys.exit(1)
+
+print(
+    f'correct: exit_code={actual}; SIGKILL is reported as shell status 128+9, '
+    f'and galitime preserved that value.'
+)
