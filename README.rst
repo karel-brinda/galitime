@@ -138,7 +138,8 @@ Common local commands:
 
 .. code-block:: bash
 
-    make install
+    python -m pip install .
+    python -m build
     make test
 
 

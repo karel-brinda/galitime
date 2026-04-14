@@ -1,5 +1,5 @@
 .PHONY: \
-	all clean install \
+	all clean install build \
 	test \
 	pylint flake8 format \
 	inc pypi sha256 \
@@ -29,14 +29,15 @@ help: ## Print help messages
 		| column -c2 -t -s : )"
 
 clean: ## Clean
-	$(PYTHON) setup.py clean --all
-	rm -fr _index_test/ _test_*
+	rm -fr build dist *.egg-info _index_test/ _test_*
 	$(MAKE) -C galitime clean
 	$(MAKE) -C tests clean
 
-install: ## Install using PIP
-	$(PIP) uninstall -y galitime || true
-	$(PIP) install .
+install: ## Install using python -m pip
+	$(PYTHON) -m pip install .
+
+build: ## Build sdist and wheel
+	$(PYTHON) -m build
 
 
 ###########
@@ -68,7 +69,7 @@ inc:
 pypi: ## Upload to PyPI
 pypi:
 	$(MAKE) clean
-	$(PYTHON) setup.py sdist bdist_wheel
+	$(PYTHON) -m build
 	$(PYTHON) -m twine upload dist/*
 
 
