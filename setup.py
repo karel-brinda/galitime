@@ -1,21 +1,28 @@
 # see https://github.com/pypa/sampleproject
 
-import setuptools
-
-import os
+import re
 import sys
+from pathlib import Path
+
+import setuptools
 
 if sys.version_info < (3, 7):
     sys.exit('Minimum supported Python version is 3.7')
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = Path(__file__).resolve().parent
 
 # Get the long description from the README file
-with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+long_description = (here / 'README.rst').read_text(encoding='utf-8')
 
 # Get the current version
-exec(open("galitime/version.py").read())
+match = re.search(
+    r'^__version__\s*=\s*[\'"]([^\'"]+)[\'"]',
+    (here / 'galitime' / 'galitime.py').read_text(encoding='utf-8'),
+    re.MULTILINE,
+)
+if not match:
+    raise RuntimeError('Unable to find __version__ in galitime/galitime.py')
+VERSION = match.group(1)
 
 setuptools.setup(
     name='galitime',

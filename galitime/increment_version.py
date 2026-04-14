@@ -1,20 +1,26 @@
 #! /usr/bin/env python3
 
-import os
+import re
 import sys
+from pathlib import Path
 
-vfn = os.path.join(os.path.dirname(sys.argv[0]), "version.py")
+vfn = Path(__file__).with_name("galitime.py")
 
-exec(open(vfn).read())
+content = vfn.read_text(encoding="utf-8")
+match = re.search(r'^__version__\s*=\s*"([^"]+)"', content, re.MULTILINE)
+if not match:
+    raise RuntimeError("Unable to find __version__ in galitime.py")
 
-numbers = VERSION.split(".")
+numbers = match.group(1).split(".")
 numbers[-1] = str(int(numbers[-1]) + 1)
 
 version = ".".join(numbers)
 
-with open(vfn, "w") as f:
-    f.write('try:\n')
-    f.write('    from __commit import *\n')
-    f.write('except ImportError:\n')
-    f.write('    pass\n')
-    f.write('VERSION = "{}"'.format(version))
+updated = re.sub(
+    r'^__version__\s*=\s*"([^"]+)"',
+    '__version__ = "{}"'.format(version),
+    content,
+    count=1,
+    flags=re.MULTILINE,
+)
+vfn.write_text(updated, encoding="utf-8")
