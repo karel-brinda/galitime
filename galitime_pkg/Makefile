@@ -13,9 +13,9 @@ SHELL=/usr/bin/env bash -eo pipefail
 all:
 
 help: ## Print help messages
-	@echo -e "$$(grep -hE '^\S*(:.*)?##' $(MAKEFILE_LIST) \
+	@printf '%b\n' "$$(grep -hE '^\S*(:.*)?##' $(MAKEFILE_LIST) \
 		| sed \
-			-e 's/:.*##\s*/:/' \
+			-e '/:/ s/[[:space:]]*##[[:space:]]*/ /' \
 			-e 's/^\(.*\):\(.*\)/   \\x1b[36m\1\\x1b[m:\2/' \
 			-e 's/^\([^#]\)/\1/g' \
 			-e 's/: /:/g' \

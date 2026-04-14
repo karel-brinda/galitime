@@ -1,8 +1,10 @@
-name: attotree
+name: galitime
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  #  - gtime
-
+  - python>=3.7
+  - pip
+  - pip:
+      - -r requirements.txt

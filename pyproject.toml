@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools >= 61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "galitime"
+dynamic = ["version"]
+description = "Software for benchmarking scientific software."
+readme = "README.rst"
+requires-python = ">=3.7"
+authors = [{ name = "Karel Brinda", email = "karel.brinda@inria.fr" }]
+license = { text = "MIT" }
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: Unix",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+keywords = ["benchmark", "timing", "performance", "cli", "gnu-time"]
+
+[project.urls]
+Homepage = "https://github.com/karel-brinda/galitime"
+Source = "https://github.com/karel-brinda/galitime"
+Issues = "https://github.com/karel-brinda/galitime/issues"
+
+[project.scripts]
+galitime = "galitime_pkg.galitime:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "galitime_pkg.galitime.__version__" }
+
+[tool.setuptools]
+packages = ["galitime_pkg"]

@@ -1,0 +1,6 @@
+docutils
+flake8
+pylint
+twine
+wheel
+yapf
