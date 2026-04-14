@@ -16,13 +16,7 @@ from pathlib import Path
 
 PROGRAM = 'galitime'
 DESC = 'benchmarking of computational experiments using GNU time'
-
-try:
-    sys.path.append(os.path.dirname(__file__))
-    import version
-    VERSION = version.VERSION
-except ImportError:
-    VERSION = "(version NA)"
+__version__ = "0.3.0"
 
 DEFAULT_l = "stderr"
 DEFAULT_r = 1
@@ -321,7 +315,7 @@ def main():
 
     parser = CustomArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="Program: {} ({})\n".format(PROGRAM, DESC) + "Version: {}\n".format(VERSION) +
+        description="Program: {} ({})\n".format(PROGRAM, DESC) + "Version: {}\n".format(__version__) +
         "Contact: Karel Brinda <karel.brinda@inria.fr>",
     )
 
@@ -330,7 +324,7 @@ def main():
     parser.add_argument(
         '-v',
         action='version',
-        version='{} {}'.format(PROGRAM, VERSION),
+        version='{} {}'.format(PROGRAM, __version__),
     )
 
     parser.add_argument(
