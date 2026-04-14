@@ -32,3 +32,16 @@ When changing packaging, entry points, or layout, test in this order:
 * Prefer minimal patches.
 * Do not do broad cleanup just because the layout looks unusual.
 * Keep README and tests aligned with the standalone-first design.
+
+
+## Tests
+
+* Keep tests aligned with the standalone-first design.
+* Prefer small, focused test directories with one clear purpose each.
+* In Makefile-based tests, prefer a declarative `all:` target with named step targets.
+* Keep test output readable and stable, with numbered step messages such as `[1/3] ...`.
+* Prefer one semantic check per step target.
+* Helper scripts should be silent on success and print only on failure.
+* Preserve the validation order defined above when changing packaging, entry points, or layout.
+* Platform-specific checks are fine when needed, but the default path should stay covered first.
+* Do not shift tests toward a package-first worldview.
