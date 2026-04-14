@@ -351,8 +351,8 @@ def main():
 
     parser = CustomArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="Program: {} ({})\n".format(PROGRAM, DESC) + "Version: {}\n".format(__version__) +
-        "Contact: Karel Brinda <karel.brinda@inria.fr>",
+        description="Program: {} ({})\n".format(PROGRAM, DESC) +
+        "Version: {}\n".format(__version__) + "Contact: Karel Brinda <karel.brinda@inria.fr>",
     )
 
     parser.add_argument('command', help='the command to be benchmarked')

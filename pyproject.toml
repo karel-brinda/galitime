@@ -27,10 +27,10 @@ Source = "https://github.com/karel-brinda/galitime"
 Issues = "https://github.com/karel-brinda/galitime/issues"
 
 [project.scripts]
-galitime = "galitime.galitime:main"
+galitime = "galitime_pkg.galitime:main"
 
 [tool.setuptools.dynamic]
-version = { attr = "galitime.galitime.__version__" }
+version = { attr = "galitime_pkg.galitime.__version__" }
 
 [tool.setuptools]
-packages = ["galitime"]
+packages = ["galitime_pkg"]

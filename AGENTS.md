@@ -1,30 +1,34 @@
 # AGENTS.md
 
-## Repository rules
+## Invariants
 
-- Keep patches minimal.
-- Do not change test expectations.
-- Prefer targeted fixes over refactors.
-- Treat subprocess/shell wait status as the canonical exit code.
-- GNU time output is for metrics only.
-- Run the smallest relevant test first, then re-run the failing test.
-- If parsing external tool output, validate shape and fail with an explicit error.
+* The primary artifact is the top-level executable `./galitime`.
+* The canonical implementation and version metadata live in `./galitime`, not in `galitime_pkg/`.
+* The main intended use is to take `./galitime` out of the repository and run it directly.
+* Python packaging is secondary. `pip install` must work, but packaging must adapt to the standalone script design, not the reverse.
+* Do not refactor this into a normal package-first Python project.
+* Do not move the main implementation under `galitime_pkg/`.
+* Do not turn `./galitime` into a thin wrapper unless explicitly requested.
+* Do not treat `galitime_pkg/galitime.py` as the canonical home for CLI behavior, version metadata, or imports.
+* Avoid duplicated implementations across `./galitime` and `galitime_pkg/`.
 
-## Repository invariants
+## Packaging
 
-These are intentional design decisions. Do not change them unless explicitly asked.
+* `galitime_pkg/` exists to support installation, not to define the primary structure or source of truth.
+* If packaging needs adjustment, prefer packaging metadata, build wiring, or lightweight mirroring/symlinking.
+* Do not "simplify" the project by making `galitime_pkg/` the canonical implementation unless explicitly requested.
 
-- Version metadata is intentionally stored in `galitime/galitime.py`; do not move or copy version constants elsewhere.
-- Do not refactor project layout for "cleanliness" unless the task explicitly requests it.
-- Preserve public CLI behavior and import paths unless explicitly requested.
-- Prefer minimal patches over broad reorganization.
+## Validation order
 
-## Before editing
+When changing packaging, entry points, or layout, test in this order:
 
-Check whether the requested change conflicts with any repository invariant above.
-If it does, keep the invariant and implement the request around it.
+1. Copy `./galitime` alone to a temporary directory and run it.
+2. Run the top-level `./galitime` from the repo.
+3. Install into a fresh virtual environment and run `galitime`.
+4. Run the existing behavioral tests.
 
-## When unsure
+## Change rules
 
-Default to preserving the existing pattern.
-Ask: "Is this an intentional repository convention?" only if the task is blocked by ambiguity.
+* Prefer minimal patches.
+* Do not do broad cleanup just because the layout looks unusual.
+* Keep README and tests aligned with the standalone-first design.

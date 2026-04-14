@@ -131,7 +131,7 @@ Development
 
 Repository layout:
 
-* ``galitime/``: package source and CLI entry point
+* ``galitime_pkg/``: package source and CLI entry point
 * ``tests/``: Makefile-based smoke tests
 
 Common local commands:
