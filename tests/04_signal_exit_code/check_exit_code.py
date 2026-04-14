@@ -4,7 +4,7 @@ import csv
 import sys
 
 EXPECTED = '137'
-PATH = 'out.tsv'
+PATH = sys.argv[1] if len(sys.argv) > 1 else 'out.tsv'
 
 with open(PATH, newline='') as f:
     rows = list(csv.reader(f, delimiter='\t'))
