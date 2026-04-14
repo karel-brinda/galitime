@@ -45,7 +45,7 @@ mac: ## Run macOS-specific test for --gtime
 		exit 1; \
 	}
 	@echo "Checking that the command completed successfully"
-	@grep -q $'\t0\ttrue$$' time_gtime.log || { \
+	@tail -n 1 time_gtime.log | grep -q "$$(printf '\t0\ttrue$$')" || { \
 		echo "ERROR: expected a successful run ending with tab-0-tab-true"; \
 		echo "Actual contents:"; \
 		cat time_gtime.log; \
