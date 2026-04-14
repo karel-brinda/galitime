@@ -286,7 +286,7 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions):
     platf = sys.platform
     # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
     if gtime:
-        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime")
+        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime", shell=shell)
     else:
         if platf == "linux":
             t = GnuTime(command=command, experiment=experiment, shell=shell)
