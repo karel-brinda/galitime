@@ -4,6 +4,7 @@
 	all clean install build \
 	test \
 	pylint flake8 format \
+	pypi \
 	help
 
 PYTHON ?= python3
@@ -51,3 +52,13 @@ flake8: ## Run Flake8
 
 format: ## Run YAPF (inline replacement)
 	yapf -i --recursive galitime tests
+
+
+###############
+## RELEASING ##
+###############
+
+pypi: ## Upload to PyPI
+	$(MAKE) clean
+	$(PYTHON) -m build
+	$(PYTHON) -m twine upload dist/*
