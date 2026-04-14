@@ -108,25 +108,24 @@ CLI
 
 .. code-block:: text
 
-    $ galitime -h
-
+     
     Program: galitime (benchmarking of computational experiments using GNU time)
     Version: 0.3.0
-    Contact: Karel Brinda
+    Contact: Karel Brinda <karel.brinda@inria.fr>
 
     usage: galitime [-r INT] [-g] [-l FILE] [-n STR] [-s STR] command
 
     positional arguments:
-      command               the command to be benchmarked
+      command              the command to be benchmarked
 
-    options:
-      -h                    show this help message and exit
-      -v                    show program's version number and exit
-      -r, --reps INT        number of repetitions [1]
-      -g, --gtime           call gtime instead of time (useful on macOS)
-      -l, --log FILE        output (filename/stderr/stdout) [stderr]
-      -n, --name STR        name of the experiment (for output)
-      -s, --shell STR       shell for execution [/bin/bash]
+    optional arguments:
+      -h                   show this help message and exit
+      -v                   show program's version number and exit
+      -r INT, --reps INT   number of repetitions [1]
+      -g, --gtime          call gtime instead of time (useful on MacOS)
+      -l FILE, --log FILE  output (filename/stderr/stdout) [stderr]
+      -n STR, --name STR   name of the experiment (for output)
+      -s STR, --shell STR  shell for execution [/bin/bash]
 
 Output columns
 --------------
