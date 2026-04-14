@@ -83,7 +83,8 @@ sha256:
 #######################
 
 readme: ## Convert README to HTML
-	rst2html.py README.rst > README.html
+	./scripts/update_readme_help.sh
+	#rst2html.py README.rst > README.html
 
 wconda: ## Open Bioconda webpage
 	open https://bioconda.github.io/recipes/galitime/README.html
