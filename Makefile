@@ -55,7 +55,7 @@ flake8: ## Run Flake8
 	flake8
 
 format: ## Run YAPF (inline replacement)
-	yapf -i --recursive galitime_pkg setup.py tests
+	yapf -i galitime setup.py {galitime_pkg,tests}/{*.py,*/*.py}
 
 
 #############
