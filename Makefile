@@ -30,7 +30,7 @@ help: ## Print help messages
 
 clean: ## Clean
 	rm -fr build dist *.egg-info _index_test/ _test_*
-	$(MAKE) -C galitime clean
+	$(MAKE) -C galitime_pkg clean
 	$(MAKE) -C tests clean
 
 install: ## Install using python -m pip
@@ -49,13 +49,13 @@ test: ## Run tests
 	$(MAKE) -C tests
 
 pylint: ## Run PyLint
-	$(PYTHON) -m pylint galitime
+	$(PYTHON) -m pylint galitime_pkg
 
 flake8: ## Run Flake8
 	flake8
 
 format: ## Run YAPF (inline replacement)
-	yapf -i --recursive galitime setup.py tests
+	yapf -i --recursive galitime_pkg setup.py tests
 
 
 #############
@@ -64,7 +64,7 @@ format: ## Run YAPF (inline replacement)
 
 inc: ## Increment version
 inc:
-	./galitime/increment_version.py
+	./galitime_pkg/increment_version.py
 
 pypi: ## Upload to PyPI
 pypi:

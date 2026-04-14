@@ -11,9 +11,9 @@ SHELL=/usr/bin/env bash -eo pipefail
 ##############
 
 all:
-	../../galitime/galitime.py --log time.log ls
-	((../../galitime/galitime.py ls >/dev/null) 2>&1) > time2.log
-	../../galitime/galitime.py -r 5 --log time3.log "sleep 0.1"
+	../../galitime_pkg/galitime.py --log time.log ls
+	((../../galitime_pkg/galitime.py ls >/dev/null) 2>&1) > time2.log
+	../../galitime_pkg/galitime.py -r 5 --log time3.log "sleep 0.1"
 
 help: ## Print help messages
 	@echo -e "$$(grep -hE '^\S*(:.*)?##' $(MAKEFILE_LIST) \

@@ -14,7 +14,7 @@
 
 These are intentional design decisions. Do not change them unless explicitly asked.
 
-- Version metadata is intentionally stored in `galitime/galitime.py`; do not move or copy version constants elsewhere.
+- Version metadata is intentionally stored in `galitime_pkg/galitime.py`; do not move or copy version constants elsewhere.
 - Do not refactor project layout for "cleanliness" unless the task explicitly requests it.
 - Preserve public CLI behavior and import paths unless explicitly requested.
 - Prefer minimal patches over broad reorganization.
