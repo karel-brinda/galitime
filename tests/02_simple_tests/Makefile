@@ -1,4 +1,6 @@
-.PHONY: all clean test_file_log test_stderr_default test_stdout_log test_repeat mac
+.PHONY: all clean \
+	test_file_log test_stderr_default test_stdout_log test_repeat \
+	test_gtime_stdout_log test_gtime_file_log
 
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eo pipefail -c
@@ -6,12 +8,15 @@ SHELL := /usr/bin/env bash
 GALITIME := ../../galitime
 UNAME_S := $(shell uname -s)
 
-ALL_TARGETS := test_file_log test_stderr_default test_stdout_log test_repeat
+BASE_TARGETS := test_file_log test_stderr_default test_stdout_log test_repeat
+TOTAL_STEPS := 4
+
 ifeq ($(UNAME_S),Darwin)
-ALL_TARGETS += mac
+BASE_TARGETS += test_gtime_stdout_log test_gtime_file_log
+TOTAL_STEPS := 6
 endif
 
-all: $(ALL_TARGETS)
+all: $(BASE_TARGETS)
 
 define ASSERT_TSV_OK
 	@test -s "$(1)" || { \
@@ -46,36 +51,44 @@ define ASSERT_TSV_OK
 		}' "$(1)"
 endef
 
-test_file_log:
-	@echo "Running file log test"
-	@$(GALITIME) --log time.log true
-	$(call ASSERT_TSV_OK,time.log)
-
-test_stderr_default:
-	@echo "Running default stderr log test"
-	@$(GALITIME) "echo ok" >/dev/null 2> time2.log
-	$(call ASSERT_TSV_OK,time2.log)
-
-test_stdout_log:
-	@echo "Running explicit stdout log test"
-	@$(GALITIME) --log stdout true > time_stdout.log
-	$(call ASSERT_TSV_OK,time_stdout.log)
-
-test_repeat:
-	@echo "Running repeated-run test"
-	@$(GALITIME) -r 5 --log time3.log "sleep 0.1"
-	$(call ASSERT_TSV_OK,time3.log)
-	@awk 'END { if (NR != 6) { print "ERROR: expected 6 lines in time3.log, got " NR; exit 1 } }' time3.log
-
-mac:
-	@echo "Running macOS gtime tests"
+define ASSERT_GTIME_AVAILABLE
 	@command -v gtime >/dev/null || { \
 		echo "ERROR: gtime not found in PATH"; \
 		echo "Install it with: brew install gnu-time"; \
 		exit 1; \
 	}
+endef
+
+test_file_log:
+	@echo "[1/$(TOTAL_STEPS)] File log test"
+	@$(GALITIME) --log time.log true
+	$(call ASSERT_TSV_OK,time.log)
+
+test_stderr_default:
+	@echo "[2/$(TOTAL_STEPS)] Default stderr log test"
+	@$(GALITIME) "echo ok" >/dev/null 2> time2.log
+	$(call ASSERT_TSV_OK,time2.log)
+
+test_stdout_log:
+	@echo "[3/$(TOTAL_STEPS)] Explicit stdout log test"
+	@$(GALITIME) --log stdout true > time_stdout.log
+	$(call ASSERT_TSV_OK,time_stdout.log)
+
+test_repeat:
+	@echo "[4/$(TOTAL_STEPS)] Repeated-run test"
+	@$(GALITIME) -r 5 --log time3.log "sleep 0.1"
+	$(call ASSERT_TSV_OK,time3.log)
+	@awk 'END { if (NR != 6) { print "ERROR: expected 6 lines in time3.log, got " NR; exit 1 } }' time3.log
+
+test_gtime_stdout_log:
+	@echo "[5/$(TOTAL_STEPS)] macOS GNU time stdout log test"
+	$(call ASSERT_GTIME_AVAILABLE)
 	@$(GALITIME) --gtime --log stdout true > time_gtime_stdout.log
 	$(call ASSERT_TSV_OK,time_gtime_stdout.log)
+
+test_gtime_file_log:
+	@echo "[6/$(TOTAL_STEPS)] macOS GNU time file log test"
+	$(call ASSERT_GTIME_AVAILABLE)
 	@$(GALITIME) --gtime --log time_gtime.log true
 	$(call ASSERT_TSV_OK,time_gtime.log)
 
