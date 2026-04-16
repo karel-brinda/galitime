@@ -149,7 +149,7 @@ class AbstractTime(ABC):
         """
         for i in range(times):
             self.current_i += 1
-            run = None if times == 1 else self.current_i
+            run = self.current_i
             self.current_result = TimingResult(
                 experiment=self.experiment, run=run, command=self.command_simpl
             )
