@@ -70,6 +70,10 @@ STATUS_TIMING_ERROR = "timing_error"
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
 # the integers being converted to int from str
 class TimingResult:
+    PRINTED_COLUMNS = (
+        "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "max_ram_kb", "status",
+        "exit_code", "command"
+    )
 
     def __init__(self, experiment=None, run=None, command=None):
         """Setup all the fields
@@ -78,8 +82,8 @@ class TimingResult:
 
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
-            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s",
-            "max_ram_kb", "fs_inputs", "fs_outputs", "status", "exit_code", "command"
+            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "max_ram_kb", "fs_inputs",
+            "fs_outputs", "status", "exit_code", "command"
         )
         for x in mandatory_columns:
             self.add(x, NA_VALUE)
@@ -117,8 +121,8 @@ class TimingResult:
         return repr(self._data)
 
     def __str__(self):
-        return "\t".join(map(str, self._data.keys())
-                         ) + "\n" + "\t".join(map(str, self._data.values()))
+        printed_values = [self._data[k] for k in self.PRINTED_COLUMNS]
+        return "\t".join(self.PRINTED_COLUMNS) + "\n" + "\t".join(map(str, printed_values))
 
 
 class AbstractTime(ABC):
