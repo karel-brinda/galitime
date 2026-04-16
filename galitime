@@ -35,7 +35,6 @@ SOFTWARE.
 
 import argparse
 import collections
-import datetime
 import os
 import shlex
 import re
@@ -74,7 +73,7 @@ class TimingResult:
 
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
-            "experiment", "run", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu",
+            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s",
             "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
         )
         for x in mandatory_columns:
@@ -156,6 +155,7 @@ class AbstractTime(ABC):
 
             self._execute_time()
             self._parse_result()
+            self._set_cpu_time()
             self._save_result()
 
             exit_code = int(self.current_result['exit_code'])
@@ -193,13 +193,11 @@ class AbstractTime(ABC):
 
         #TODO: integrate timeout into the whole method
         timeout = None
-        start_time = datetime.datetime.now()
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
             exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
         except subprocess.TimeoutExpired:
             exit_code = -1  # timeout
-        end_time = datetime.datetime.now()
         try:
             with open(self.current_exit_code_fn()) as exit_code_fo:
                 exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
@@ -209,7 +207,6 @@ class AbstractTime(ABC):
             if len(exit_code_lines) != 1:
                 raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
             exit_code = int(exit_code_lines[0])
-        self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
         self.current_result.set("exit_code", exit_code)
 
         ## TODO: different treating based on the expected behaviour
@@ -217,6 +214,11 @@ class AbstractTime(ABC):
     @abstractmethod
     def _parse_result(self):
         pass
+
+    def _set_cpu_time(self):
+        user_s = float(self.current_result["user_s"])
+        sys_s = float(self.current_result["sys_s"])
+        self.current_result.set("cpu_s", user_s + sys_s)
 
     def _save_result(self):
         self.results.append(self.current_result)
@@ -257,7 +259,7 @@ class GnuTime(AbstractTime):
             raise RuntimeError(f"Unexpected GNU time output shape: {gtime_output_lines!r}")
         # GNU time's %x is useful for metrics/debugging, but the shell wait status is the canonical exit code.
         for k, v in zip(self.gtime_columns, gtime_output_values):
-            if k == "exit_code":
+            if k in {"percent_cpu", "exit_code"}:
                 continue
             self.current_result.set(k, v)
         self.current_result.bin_to_si("max_ram_kb")
@@ -302,7 +304,6 @@ class MacTime(AbstractTime):
         self.current_result.set("user_s", d["user"])
         self.current_result.set("sys_s", d["sys"])
         self.current_result.set("max_ram_kb", int(round(d["maximum resident set size"] / 1000)))
-        self.current_result.add("max_ram_kb_alt", int(round(d["peak memory footprint"] / 1000)))
 
         #for k, v in zip(self.gtime_columns, gtime_output_values):
         #    self.current_result[k] = v
