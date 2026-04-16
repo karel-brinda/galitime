@@ -110,10 +110,10 @@ CLI
 
      
     Program: galitime (benchmarking of computational experiments using GNU time)
-    Version: 0.3.0
+    Version: 0.4.0
     Contact: Karel Brinda <karel.brinda@inria.fr>
 
-    usage: galitime [-r INT] [-g] [-l FILE] [-n STR] [-s STR] command
+    usage: galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] command
 
     positional arguments:
       command              the command to be benchmarked
@@ -121,11 +121,22 @@ CLI
     optional arguments:
       -h                   show this help message and exit
       -v                   show program's version number and exit
+      -d, --debug          print detailed debug trace to stderr
       -r INT, --reps INT   number of repetitions [1]
       -g, --gtime          call gtime instead of time (useful on MacOS)
       -l FILE, --log FILE  output (filename/stderr/stdout) [stderr]
       -n STR, --name STR   name of the experiment (for output)
       -s STR, --shell STR  shell for execution [/bin/bash]
+
+.. code-block:: bash
+
+    galitime --debug -l stdout "sleep 0.1"
+
+Debug diagnostics are written to ``stderr`` with timestamped prefixes such as
+``[galitime 2026-04-16T15:55:56] ...``.
+
+When ``-l stderr`` is used, both the timing table and debug diagnostics are written to
+``stderr``, but debug lines remain easy to distinguish by the ``[galitime ...]`` prefix.
 
 Output columns
 --------------
