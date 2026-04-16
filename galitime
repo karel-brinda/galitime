@@ -61,6 +61,10 @@ DEFAULT_r = 1
 DEFAULT_s = '/usr/bin/env bash'
 DEFAULT_s = shutil.which('bash')
 NA_VALUE = "NA"
+STATUS_OK = "ok"
+STATUS_FAILED = "failed"
+STATUS_TIMEOUT = "timeout"
+STATUS_TIMING_ERROR = "timing_error"
 
 
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
@@ -75,7 +79,7 @@ class TimingResult:
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
             "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s",
-            "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
+            "max_ram_kb", "fs_inputs", "fs_outputs", "status", "exit_code", "command"
         )
         for x in mandatory_columns:
             self.add(x, NA_VALUE)
@@ -154,16 +158,34 @@ class AbstractTime(ABC):
                 experiment=self.experiment, run=run, command=self.command_simpl
             )
 
-            self._execute_time()
-            self._parse_result()
-            self._set_cpu_time()
+            try:
+                self._execute_time()
+                self._parse_result()
+                self._set_cpu_time()
+                self._set_status()
+            except Exception as err:
+                self.current_result.set("status", STATUS_TIMING_ERROR)
+                print(f"Galitime error: timing error ({err})", file=sys.stderr)
+                self.final_exit_code = 1
+                self._save_result()
+                break
+
             self._save_result()
 
-            exit_code = int(self.current_result['exit_code'])
-            if exit_code != 0:
+            status = self.current_result["status"]
+            if status == STATUS_OK:
+                continue
+
+            if status == STATUS_FAILED:
+                exit_code = int(self.current_result['exit_code'])
                 print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
                 self.final_exit_code = exit_code
-                break
+            elif status == STATUS_TIMEOUT:
+                print("Galitime error: command timed out", file=sys.stderr)
+                self.final_exit_code = 124
+            else:
+                self.final_exit_code = 1
+            break
             #
             # TODO: Add error treatment based on the user pre-specified failure mode
             # See https://github.com/karel-brinda/galitime/issues/25
@@ -194,11 +216,13 @@ class AbstractTime(ABC):
 
         #TODO: integrate timeout into the whole method
         timeout = None
+        timed_out = False
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
             exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
         except subprocess.TimeoutExpired:
-            exit_code = -1  # timeout
+            timed_out = True
+            exit_code = None
         try:
             with open(self.current_exit_code_fn()) as exit_code_fo:
                 exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
@@ -208,6 +232,8 @@ class AbstractTime(ABC):
             if len(exit_code_lines) != 1:
                 raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
             exit_code = int(exit_code_lines[0])
+        if timed_out and exit_code is None:
+            self.current_result.set("status", STATUS_TIMEOUT)
         self.current_result.set("exit_code", exit_code)
 
         ## TODO: different treating based on the expected behaviour
@@ -220,6 +246,15 @@ class AbstractTime(ABC):
         user_s = float(self.current_result["user_s"])
         sys_s = float(self.current_result["sys_s"])
         self.current_result.set("cpu_s", user_s + sys_s)
+
+    def _set_status(self):
+        if self.current_result["status"] != NA_VALUE:
+            return
+        exit_code = int(self.current_result["exit_code"])
+        if exit_code == 0:
+            self.current_result.set("status", STATUS_OK)
+        else:
+            self.current_result.set("status", STATUS_FAILED)
 
     def _save_result(self):
         self.results.append(self.current_result)
