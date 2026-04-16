@@ -35,7 +35,6 @@ SOFTWARE.
 
 import argparse
 import collections
-import datetime
 import os
 import shlex
 import re
@@ -50,7 +49,7 @@ from pathlib import Path
 
 PROGRAM = 'galitime'
 DESC = 'benchmarking of computational experiments using GNU time'
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Karel Brinda"
 __email__ = "karel.brinda@inria.fr"
 __license__ = "MIT"
@@ -61,11 +60,20 @@ DEFAULT_l = "stderr"
 DEFAULT_r = 1
 DEFAULT_s = '/usr/bin/env bash'
 DEFAULT_s = shutil.which('bash')
+NA_VALUE = "NA"
+STATUS_OK = "ok"
+STATUS_FAILED = "failed"
+STATUS_TIMEOUT = "timeout"
+STATUS_TIMING_ERROR = "timing_error"
 
 
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
 # the integers being converted to int from str
 class TimingResult:
+    PRINTED_COLUMNS = (
+        "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct",
+        "max_ram_kb", "status", "exit_code", "command"
+    )
 
     def __init__(self, experiment=None, run=None, command=None):
         """Setup all the fields
@@ -74,11 +82,11 @@ class TimingResult:
 
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
-            "experiment", "run", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu",
-            "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
+            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct",
+            "max_ram_kb", "fs_inputs", "fs_outputs", "status", "exit_code", "command"
         )
         for x in mandatory_columns:
-            self.add(x, None)
+            self.add(x, NA_VALUE)
 
         # 2. insert experiment parameters
         self.set('experiment', experiment)
@@ -97,11 +105,11 @@ class TimingResult:
 
     def set(self, key, value):
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        self._data[key] = value
+        self._data[key] = NA_VALUE if value is None else value
 
     def add(self, key, value):
         assert key not in self._data, f"The key '{key}' is already in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        self._data[key] = value
+        self._data[key] = NA_VALUE if value is None else value
 
     def __delitem__(self, key):
         del self._data[key]
@@ -112,9 +120,15 @@ class TimingResult:
     def __repr__(self):
         return repr(self._data)
 
+    @staticmethod
+    def _format_printed_value(key, value):
+        if key == "cpu_pct" and value != NA_VALUE:
+            return f"{value}%"
+        return value
+
     def __str__(self):
-        return "\t".join(map(str, self._data.keys())
-                         ) + "\n" + "\t".join(map(str, self._data.values()))
+        printed_values = [self._format_printed_value(k, self._data[k]) for k in self.PRINTED_COLUMNS]
+        return "\t".join(self.PRINTED_COLUMNS) + "\n" + "\t".join(map(str, printed_values))
 
 
 class AbstractTime(ABC):
@@ -149,20 +163,40 @@ class AbstractTime(ABC):
         """
         for i in range(times):
             self.current_i += 1
-            run = None if times == 1 else self.current_i
+            run = self.current_i
             self.current_result = TimingResult(
                 experiment=self.experiment, run=run, command=self.command_simpl
             )
 
-            self._execute_time()
-            self._parse_result()
+            try:
+                self._execute_time()
+                self._parse_result()
+                self._set_cpu_time()
+                self._set_cpu_pct()
+                self._set_status()
+            except Exception as err:
+                self.current_result.set("status", STATUS_TIMING_ERROR)
+                print(f"Galitime error: timing error ({err})", file=sys.stderr)
+                self.final_exit_code = 1
+                self._save_result()
+                break
+
             self._save_result()
 
-            exit_code = int(self.current_result['exit_code'])
-            if exit_code != 0:
+            status = self.current_result["status"]
+            if status == STATUS_OK:
+                continue
+
+            if status == STATUS_FAILED:
+                exit_code = int(self.current_result['exit_code'])
                 print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
                 self.final_exit_code = exit_code
-                break
+            elif status == STATUS_TIMEOUT:
+                print("Galitime error: command timed out", file=sys.stderr)
+                self.final_exit_code = 124
+            else:
+                self.final_exit_code = 1
+            break
             #
             # TODO: Add error treatment based on the user pre-specified failure mode
             # See https://github.com/karel-brinda/galitime/issues/25
@@ -193,13 +227,13 @@ class AbstractTime(ABC):
 
         #TODO: integrate timeout into the whole method
         timeout = None
-        start_time = datetime.datetime.now()
+        timed_out = False
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
             exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
         except subprocess.TimeoutExpired:
-            exit_code = -1  # timeout
-        end_time = datetime.datetime.now()
+            timed_out = True
+            exit_code = None
         try:
             with open(self.current_exit_code_fn()) as exit_code_fo:
                 exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
@@ -209,7 +243,8 @@ class AbstractTime(ABC):
             if len(exit_code_lines) != 1:
                 raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
             exit_code = int(exit_code_lines[0])
-        self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
+        if timed_out and exit_code is None:
+            self.current_result.set("status", STATUS_TIMEOUT)
         self.current_result.set("exit_code", exit_code)
 
         ## TODO: different treating based on the expected behaviour
@@ -217,6 +252,28 @@ class AbstractTime(ABC):
     @abstractmethod
     def _parse_result(self):
         pass
+
+    def _set_cpu_time(self):
+        user_s = float(self.current_result["user_s"])
+        sys_s = float(self.current_result["sys_s"])
+        self.current_result.set("cpu_s", user_s + sys_s)
+
+    def _set_cpu_pct(self):
+        real_s = float(self.current_result["real_s"])
+        cpu_s = float(self.current_result["cpu_s"])
+        if real_s <= 0:
+            self.current_result.set("cpu_pct", None)
+        else:
+            self.current_result.set("cpu_pct", 100.0 * cpu_s / real_s)
+
+    def _set_status(self):
+        if self.current_result["status"] != NA_VALUE:
+            return
+        exit_code = int(self.current_result["exit_code"])
+        if exit_code == 0:
+            self.current_result.set("status", STATUS_OK)
+        else:
+            self.current_result.set("status", STATUS_FAILED)
 
     def _save_result(self):
         self.results.append(self.current_result)
@@ -257,7 +314,7 @@ class GnuTime(AbstractTime):
             raise RuntimeError(f"Unexpected GNU time output shape: {gtime_output_lines!r}")
         # GNU time's %x is useful for metrics/debugging, but the shell wait status is the canonical exit code.
         for k, v in zip(self.gtime_columns, gtime_output_values):
-            if k == "exit_code":
+            if k in {"percent_cpu", "exit_code"}:
                 continue
             self.current_result.set(k, v)
         self.current_result.bin_to_si("max_ram_kb")
@@ -302,7 +359,6 @@ class MacTime(AbstractTime):
         self.current_result.set("user_s", d["user"])
         self.current_result.set("sys_s", d["sys"])
         self.current_result.set("max_ram_kb", int(round(d["maximum resident set size"] / 1000)))
-        self.current_result.add("max_ram_kb_alt", int(round(d["peak memory footprint"] / 1000)))
 
         #for k, v in zip(self.gtime_columns, gtime_output_values):
         #    self.current_result[k] = v

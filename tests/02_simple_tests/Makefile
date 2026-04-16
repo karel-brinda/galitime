@@ -10,6 +10,7 @@ UNAME_S := $(shell uname -s)
 
 BASE_TARGETS := test_file_log test_stderr_default test_stdout_log test_repeat
 TOTAL_STEPS := 4
+EXPECTED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
 
 ifeq ($(UNAME_S),Darwin)
 BASE_TARGETS += test_gtime_stdout_log test_gtime_file_log
@@ -25,18 +26,23 @@ define ASSERT_TSV_OK
 	}
 	@awk -F '\t' '\
 		NR == 1 { \
-			if ($$1 != "experiment") { \
-				print "ERROR: first column is not experiment in $(1)"; \
+			if ($$0 != "$(EXPECTED_HEADER)") { \
+				print "ERROR: unexpected header in $(1): " $$0; \
 				exit 1; \
 			} \
+			for (i = 1; i <= NF; i++) if ($$i == "status") st = i; \
 			for (i = 1; i <= NF; i++) if ($$i == "exit_code") ec = i; \
-			if (!ec) { \
-				print "ERROR: missing exit_code column in $(1)"; \
+			if (!st || !ec) { \
+				print "ERROR: missing status or exit_code column in $(1)"; \
 				exit 1; \
 			} \
 			next; \
 		} \
 		NR > 1 { \
+			if ($$st != "ok") { \
+				print "ERROR: unexpected status in $(1): " $$0; \
+				exit 1; \
+			} \
 			if ($$ec != 0) { \
 				print "ERROR: non-zero exit_code in $(1): " $$0; \
 				exit 1; \
