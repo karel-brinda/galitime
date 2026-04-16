@@ -9,7 +9,7 @@ VENV := $(CURDIR)/_venv
 PIP := $(VENV)/bin/python -m pip
 GALITIME := $(VENV)/bin/galitime
 VERSION_RE := ^galitime [0-9]+(\.[0-9]+)+([A-Za-z0-9._+-]*)$$
-EXPECTED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	max_ram_kb	fs_inputs	fs_outputs	exit_code	command
+EXPECTED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
 
 all: test_create_venv test_install_package test_installed_version test_installed_stdout_log
 

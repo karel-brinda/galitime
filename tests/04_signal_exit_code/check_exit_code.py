@@ -4,6 +4,7 @@ import csv
 import sys
 
 EXPECTED = '137'
+EXPECTED_STATUS = 'failed'
 PATH = sys.argv[1] if len(sys.argv) > 1 else 'out.tsv'
 
 with open(PATH, newline='') as f:
@@ -17,12 +18,21 @@ header = rows[0]
 data = rows[1]
 
 try:
-    idx = header.index('exit_code')
-except ValueError:
-    print('missing exit_code column', file=sys.stderr)
+    status_idx = header.index('status')
+    exit_code_idx = header.index('exit_code')
+except ValueError as err:
+    print(f'missing expected column: {err}', file=sys.stderr)
     sys.exit(2)
 
-actual = data[idx]
+status = data[status_idx]
+if status != EXPECTED_STATUS:
+    print(
+        f'       failed: expected status={EXPECTED_STATUS}, got {status}',
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+actual = data[exit_code_idx]
 if actual != EXPECTED:
     print(
         f'       failed: expected exit_code={EXPECTED} for SIGKILL (128+9), got {actual}',
@@ -31,5 +41,5 @@ if actual != EXPECTED:
     sys.exit(1)
 
 print(
-    f'       correct: exit_code={actual}; SIGKILL is reported as shell status 128+9, and galitime preserved that value.'
+    f'       correct: status={status} and exit_code={actual}; SIGKILL is reported as shell status 128+9, and galitime preserved that value.'
 )
