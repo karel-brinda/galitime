@@ -49,7 +49,7 @@ from pathlib import Path
 
 PROGRAM = 'galitime'
 DESC = 'benchmarking of computational experiments using GNU time'
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Karel Brinda"
 __email__ = "karel.brinda@inria.fr"
 __license__ = "MIT"
