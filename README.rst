@@ -153,7 +153,6 @@ Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-d
 
 .. list-table::
    :header-rows: 1
-   :widths: 30 12 16 22 14 18
 
    * - Feature
      - Galitime
