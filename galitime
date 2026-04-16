@@ -60,6 +60,7 @@ DEFAULT_l = "stderr"
 DEFAULT_r = 1
 DEFAULT_s = '/usr/bin/env bash'
 DEFAULT_s = shutil.which('bash')
+NA_VALUE = "NA"
 
 
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
@@ -77,7 +78,7 @@ class TimingResult:
             "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
         )
         for x in mandatory_columns:
-            self.add(x, None)
+            self.add(x, NA_VALUE)
 
         # 2. insert experiment parameters
         self.set('experiment', experiment)
@@ -96,11 +97,11 @@ class TimingResult:
 
     def set(self, key, value):
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        self._data[key] = value
+        self._data[key] = NA_VALUE if value is None else value
 
     def add(self, key, value):
         assert key not in self._data, f"The key '{key}' is already in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        self._data[key] = value
+        self._data[key] = NA_VALUE if value is None else value
 
     def __delitem__(self, key):
         del self._data[key]
