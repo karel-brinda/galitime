@@ -93,9 +93,6 @@ class TimingResult:
         self.set('run', run)
         self.set('command', command)
 
-    def bin_to_si(self, key):
-        self._data[key] = int(round(int(self._data[key]) * 1.024))
-
     def __getitem__(self, key):
         return self._data[key]
 
@@ -289,9 +286,18 @@ class AbstractTime(ABC):
         return "\n".join(unique_list)
 
 
+def normalize_max_ram_kb(raw_value, raw_unit):
+    raw_value = int(raw_value)
+    if raw_unit == "bytes":
+        return int(round(raw_value / 1000.0))
+    if raw_unit == "kib":
+        return int(round(raw_value * 1024.0 / 1000.0))
+    raise ValueError(f"Unsupported memory unit: {raw_unit}")
+
+
 class GnuTime(AbstractTime):
 
-    def __init__(self, command, shell, time="/usr/bin/env time", experiment=None):
+    def __init__(self, command, shell, time="/usr/bin/env time", experiment=None, max_ram_raw_unit="kib"):
         super().__init__(command=command, time=time, shell=shell, experiment=experiment)
 
         self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
@@ -299,6 +305,7 @@ class GnuTime(AbstractTime):
             "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
             "fs_outputs"
         )
+        self.max_ram_raw_unit = max_ram_raw_unit
         self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
 
     def _parse_result(self):
@@ -317,7 +324,12 @@ class GnuTime(AbstractTime):
             if k in {"percent_cpu", "exit_code"}:
                 continue
             self.current_result.set(k, v)
-        self.current_result.bin_to_si("max_ram_kb")
+        self.current_result.set(
+            "max_ram_kb",
+            normalize_max_ram_kb(
+                raw_value=self.current_result["max_ram_kb"], raw_unit=self.max_ram_raw_unit
+            ),
+        )
 
 
 class MacTime(AbstractTime):
@@ -358,7 +370,12 @@ class MacTime(AbstractTime):
         self.current_result.set("real_s", d["real"])
         self.current_result.set("user_s", d["user"])
         self.current_result.set("sys_s", d["sys"])
-        self.current_result.set("max_ram_kb", int(round(d["maximum resident set size"] / 1000)))
+        self.current_result.set(
+            "max_ram_kb",
+            normalize_max_ram_kb(
+                raw_value=d["maximum resident set size"], raw_unit="bytes"
+            ),
+        )
 
         #for k, v in zip(self.gtime_columns, gtime_output_values):
         #    self.current_result[k] = v

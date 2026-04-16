@@ -140,7 +140,7 @@ Output columns
 6. ``cpu_s`` – total CPU time in seconds (``user_s + sys_s``)
 7. ``cpu_pct`` – Average CPU utilization percentage, computed as ``100 * (user_s + sys_s) / real_s``.
    Values above 100 indicate parallel CPU use.
-8. ``max_ram_kb`` – maximum resident memory in kilobytes
+8. ``max_ram_kb`` – maximum resident memory in decimal kilobytes (``1 KB = 1000 bytes``)
 9. ``status`` – run outcome: ``ok``, ``failed``, ``timeout``, or ``timing_error``
 10. ``exit_code`` – exit status of the benchmarked command; ``NA`` when unavailable
 11. ``command`` – normalized command string that was executed
