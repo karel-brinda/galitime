@@ -132,18 +132,18 @@ Output columns
 
 ``galitime`` writes tab-delimited output with these columns:
 
-1. ``experiment`` – experiment name supplied with ``-n/--name``; otherwise empty
-2. ``run`` – repetition number when ``-r/--reps`` is greater than 1; otherwise empty
+1. ``experiment`` – experiment name supplied with ``-n/--name``; otherwise ``NA``
+2. ``run`` – 1-based repetition number
 3. ``real_s`` – wall-clock time reported by ``time``, in seconds
-4. ``real_s_py`` – wall-clock time measured by Python around the whole execution
-5. ``user_s`` – user CPU time in seconds
-6. ``sys_s`` – system CPU time in seconds
-7. ``percent_cpu`` – CPU usage percentage reported by ``time``
+4. ``user_s`` – user CPU time in seconds
+5. ``sys_s`` – system CPU time in seconds
+6. ``cpu_s`` – total CPU time in seconds (``user_s + sys_s``)
+7. ``cpu_pct`` – Average CPU utilization percentage, computed as ``100 * (user_s + sys_s) / real_s``.
+   Values above 100 indicate parallel CPU use.
 8. ``max_ram_kb`` – maximum resident memory in kilobytes
-9. ``fs_inputs`` – file system input operations
-10. ``fs_outputs`` – file system output operations
-11. ``exit_code`` – exit status of the benchmarked command
-12. ``command`` – normalized command string that was executed
+9. ``status`` – run outcome: ``ok``, ``failed``, ``timeout``, or ``timing_error``
+10. ``exit_code`` – exit status of the benchmarked command; ``NA`` when unavailable
+11. ``command`` – normalized command string that was executed
 
 Development
 -----------
