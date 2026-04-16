@@ -35,6 +35,7 @@ SOFTWARE.
 
 import argparse
 import collections
+import datetime
 import os
 import shlex
 import re
@@ -67,12 +68,21 @@ STATUS_TIMEOUT = "timeout"
 STATUS_TIMING_ERROR = "timing_error"
 
 
+def log_debug(enabled, message):
+    if enabled:
+        timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+        prefix = f"[{PROGRAM} {timestamp}]"
+        if sys.stderr.isatty():
+            prefix = f"\033[1m{prefix}\033[0m"
+        print(f"{prefix} {message}", file=sys.stderr, flush=True)
+
+
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
 # the integers being converted to int from str
 class TimingResult:
     PRINTED_COLUMNS = (
-        "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct",
-        "max_ram_kb", "status", "exit_code", "command"
+        "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct", "max_ram_kb",
+        "status", "exit_code", "command"
     )
 
     def __init__(self, experiment=None, run=None, command=None):
@@ -82,8 +92,8 @@ class TimingResult:
 
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
-            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct",
-            "max_ram_kb", "fs_inputs", "fs_outputs", "status", "exit_code", "command"
+            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct", "max_ram_kb",
+            "fs_inputs", "fs_outputs", "status", "exit_code", "command"
         )
         for x in mandatory_columns:
             self.add(x, NA_VALUE)
@@ -124,19 +134,24 @@ class TimingResult:
         return value
 
     def __str__(self):
-        printed_values = [self._format_printed_value(k, self._data[k]) for k in self.PRINTED_COLUMNS]
+        printed_values = [
+            self._format_printed_value(k, self._data[k]) for k in self.PRINTED_COLUMNS
+        ]
         return "\t".join(self.PRINTED_COLUMNS) + "\n" + "\t".join(map(str, printed_values))
 
 
 class AbstractTime(ABC):
 
-    def __init__(self, command, shell, experiment, time):
+    def __init__(self, command, shell, experiment, time, debug=False):
         self.time_command = time
         self.shell = shell
         self.experiment = experiment
+        self.debug = debug
         self.command = command
         self.command_simpl = " ".join(command.replace("\\\n", " ").strip().split())
         self.tmp_dir = tempfile.TemporaryDirectory()
+        self._dlog(f"temporary directory: {self.tmp_dir.name!r}")
+        self._dlog(f"time command: {self.time_command!r}")
         self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
@@ -146,6 +161,9 @@ class AbstractTime(ABC):
         tmp_dir = getattr(self, "tmp_dir", None)
         if tmp_dir is not None:
             tmp_dir.cleanup()
+
+    def _dlog(self, message):
+        log_debug(self.debug, message)
 
     @staticmethod
     def _normalize_exit_code(exit_code):
@@ -161,26 +179,43 @@ class AbstractTime(ABC):
         for i in range(times):
             self.current_i += 1
             run = self.current_i
+            self._dlog(f"run {run}/{times}: starting")
             self.current_result = TimingResult(
                 experiment=self.experiment, run=run, command=self.command_simpl
             )
 
             try:
+                self._dlog(f"run {run}/{times}: executing wrapped command")
                 self._execute_time()
+                self._dlog(f"run {run}/{times}: parsing result")
                 self._parse_result()
+                self._dlog(f"run {run}/{times}: computing CPU time")
                 self._set_cpu_time()
+                self._dlog(f"run {run}/{times}: computing CPU percentage")
                 self._set_cpu_pct()
+                self._dlog(f"run {run}/{times}: setting status")
                 self._set_status()
             except Exception as err:
+                self._dlog(f"timing exception: {type(err).__name__}: {err!r}")
                 self.current_result.set("status", STATUS_TIMING_ERROR)
                 print(f"Galitime error: timing error ({err})", file=sys.stderr)
                 self.final_exit_code = 1
+                self._dlog(f"run {run}/{times}: saving result")
                 self._save_result()
+                self._dlog(
+                    f"run {run}/{times}: final status={self.current_result['status']}, "
+                    f"exit_code={self.current_result['exit_code']}"
+                )
                 break
 
+            self._dlog(f"run {run}/{times}: saving result")
             self._save_result()
 
             status = self.current_result["status"]
+            self._dlog(
+                f"run {run}/{times}: final status={status}, "
+                f"exit_code={self.current_result['exit_code']}"
+            )
             if status == STATUS_OK:
                 continue
 
@@ -212,15 +247,21 @@ class AbstractTime(ABC):
         """Execute time, whatever command it is
         """
 
+        timing_output_fn = self.current_tmp_fn()
+        exit_code_fn = self.current_exit_code_fn()
+        self._dlog(f"timing output filename: {timing_output_fn!r}")
+        self._dlog(f"exit-code filename: {exit_code_fn!r}")
         command_script = (
-            f'galitime_exit_code_file={shlex.quote(self.current_exit_code_fn())}; '
+            f'galitime_exit_code_file={shlex.quote(exit_code_fn)}; '
             'trap \'printf "%s\\n" "$?" > "$galitime_exit_code_file"\' EXIT; '
             f'{self.command}'
         )
+        self._dlog(f"command_script: {command_script!r}")
         wrapped_command = f'{self.wrapper()} {shlex.quote(self.shell)} -c {shlex.quote(command_script)}'
-        #print(f"Running '{wrapped_command}'")
+        self._dlog(f"wrapped command: {wrapped_command!r}")
 
         main_process = subprocess.Popen(wrapped_command, shell=True, executable=self.shell)
+        self._dlog(f"subprocess pid: {main_process.pid}")
 
         #TODO: integrate timeout into the whole method
         timeout = None
@@ -228,14 +269,17 @@ class AbstractTime(ABC):
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
             exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
+            self._dlog(f"wait return code: {exit_code}")
         except subprocess.TimeoutExpired:
             timed_out = True
             exit_code = None
+            self._dlog(f"timeout while waiting for process after {timeout!r}")
         try:
-            with open(self.current_exit_code_fn()) as exit_code_fo:
+            with open(exit_code_fn) as exit_code_fo:
                 exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
         except FileNotFoundError:
             exit_code_lines = []
+        self._dlog(f"exit-code file lines: {exit_code_lines!r}")
         if exit_code_lines:
             if len(exit_code_lines) != 1:
                 raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
@@ -243,6 +287,7 @@ class AbstractTime(ABC):
         if timed_out and exit_code is None:
             self.current_result.set("status", STATUS_TIMEOUT)
         self.current_result.set("exit_code", exit_code)
+        self._dlog(f"final recorded exit code: {exit_code}")
 
         ## TODO: different treating based on the expected behaviour
 
@@ -297,8 +342,18 @@ def normalize_max_ram_kb(raw_value, raw_unit):
 
 class GnuTime(AbstractTime):
 
-    def __init__(self, command, shell, time="/usr/bin/env time", experiment=None, max_ram_raw_unit="kib"):
-        super().__init__(command=command, time=time, shell=shell, experiment=experiment)
+    def __init__(
+        self,
+        command,
+        shell,
+        time="/usr/bin/env time",
+        experiment=None,
+        max_ram_raw_unit="kib",
+        debug=False,
+    ):
+        super().__init__(
+            command=command, time=time, shell=shell, experiment=experiment, debug=debug
+        )
 
         self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
         self.gtime_columns = (
@@ -309,8 +364,11 @@ class GnuTime(AbstractTime):
         self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
 
     def _parse_result(self):
-        with open(self.current_tmp_fn()) as tmp_fo:
+        tmp_fn = self.current_tmp_fn()
+        self._dlog(f"reading GNU time output from: {tmp_fn!r}")
+        with open(tmp_fn) as tmp_fo:
             gtime_output_lines = [x.strip() for x in tmp_fo if x.strip()]
+        self._dlog(f"raw non-empty lines: {gtime_output_lines!r}")
         gtime_output_values = None
         for line in reversed(gtime_output_lines):
             values = line.split("\t")
@@ -319,24 +377,31 @@ class GnuTime(AbstractTime):
                 break
         if gtime_output_values is None:
             raise RuntimeError(f"Unexpected GNU time output shape: {gtime_output_lines!r}")
+        self._dlog(f"parsed values selected: {gtime_output_values!r}")
         # GNU time's %x is useful for metrics/debugging, but the shell wait status is the canonical exit code.
         for k, v in zip(self.gtime_columns, gtime_output_values):
             if k in {"percent_cpu", "exit_code"}:
                 continue
             self.current_result.set(k, v)
+        normalized_max_ram_kb = normalize_max_ram_kb(
+            raw_value=self.current_result["max_ram_kb"], raw_unit=self.max_ram_raw_unit
+        )
+        self._dlog(f"normalized max RAM value: {normalized_max_ram_kb}")
         self.current_result.set(
             "max_ram_kb",
-            normalize_max_ram_kb(
-                raw_value=self.current_result["max_ram_kb"], raw_unit=self.max_ram_raw_unit
-            ),
+            normalized_max_ram_kb,
         )
 
 
 class MacTime(AbstractTime):
 
-    def __init__(self, command, shell, experiment=None):
+    def __init__(self, command, shell, experiment=None, debug=False):
         super().__init__(
-            command=command, time="/usr/bin/env time", shell=shell, experiment=experiment
+            command=command,
+            time="/usr/bin/env time",
+            shell=shell,
+            experiment=experiment,
+            debug=debug,
         )
         if sys.platform == "darwin":
             time_command = "/usr/bin/env time"
@@ -347,7 +412,9 @@ class MacTime(AbstractTime):
 
     def _read_mactime_dict(self):
         d = collections.OrderedDict()
-        with open(self.current_tmp_fn()) as tmp_fo:
+        tmp_fn = self.current_tmp_fn()
+        self._dlog(f"reading macOS time output from: {tmp_fn!r}")
+        with open(tmp_fn) as tmp_fo:
             for x in tmp_fo:
                 x = x.strip()
                 v, k = x.split(maxsplit=1)
@@ -362,26 +429,28 @@ class MacTime(AbstractTime):
                 else:
                     vvv = vv
                 d[kk] = vvv
+        self._dlog(f"parsed dictionary: {d!r}")
         return d
 
     def _parse_result(self):
         d = self._read_mactime_dict()
-        #print(d)
         self.current_result.set("real_s", d["real"])
         self.current_result.set("user_s", d["user"])
         self.current_result.set("sys_s", d["sys"])
+        normalized_max_ram_kb = normalize_max_ram_kb(
+            raw_value=d["maximum resident set size"], raw_unit="bytes"
+        )
+        self._dlog(f"normalized max RAM value: {normalized_max_ram_kb}")
         self.current_result.set(
             "max_ram_kb",
-            normalize_max_ram_kb(
-                raw_value=d["maximum resident set size"], raw_unit="bytes"
-            ),
+            normalized_max_ram_kb,
         )
 
         #for k, v in zip(self.gtime_columns, gtime_output_values):
         #    self.current_result[k] = v
 
 
-def run_timing(log_file, command, shell, experiment, gtime, repetitions):
+def run_timing(log_file, command, shell, experiment, gtime, repetitions, debug=False):
     """
     Run a benchmarking command and log the results.
 
@@ -397,19 +466,36 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions):
     """
 
     platf = sys.platform
+    log_debug(debug, f"starting {PROGRAM} {__version__}")
+    log_debug(debug, f"parsed command: {command!r}")
+    log_debug(debug, f"shell: {shell!r}")
+    log_debug(debug, f"repetitions: {repetitions}")
+    log_debug(debug, f"log destination: {log_file!r}")
+    log_debug(debug, f"experiment name: {experiment!r}")
+    log_debug(debug, f"platform: {platf}")
     # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
     if gtime:
-        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime", shell=shell)
+        log_debug(debug, "backend: GNU time via /usr/bin/env gtime")
+        t = GnuTime(
+            command=command,
+            experiment=experiment,
+            time="/usr/bin/env gtime",
+            shell=shell,
+            debug=debug,
+        )
     else:
         if platf == "linux":
-            t = GnuTime(command=command, experiment=experiment, shell=shell)
+            log_debug(debug, "backend: GNU time via /usr/bin/env time on Linux")
+            t = GnuTime(command=command, experiment=experiment, shell=shell, debug=debug)
         elif platf == "darwin":
-            t = MacTime(command=command, experiment=experiment, shell=shell)
+            log_debug(debug, "backend: macOS /usr/bin/env time -l -p on Darwin")
+            t = MacTime(command=command, experiment=experiment, shell=shell, debug=debug)
         else:
             raise Exception(f"Unsupported OS ({platf})")
 
     t.run(times=repetitions)
 
+    log_debug(debug, f"output destination: {log_file!r}")
     if log_file == "stdout" or log_file == "-":
         print(t)
     elif log_file == "stderr":
@@ -419,7 +505,9 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions):
         with open(log_file, "w") as fo:
             print(t, file=fo)
 
-    return t.get_final_exit_code()
+    final_exit_code = t.get_final_exit_code()
+    log_debug(debug, f"final exit code: {final_exit_code}")
+    return final_exit_code
 
 
 def main():
@@ -443,7 +531,8 @@ def main():
             msg = self.format_help()
             repl = re.compile(r'\]\s+\[')
             msg = repl.sub("] [", msg)
-            msg = msg.replace(" [-h] [-v]", "")
+            msg = re.sub(r"\s+\[-h\]", "", msg)
+            msg = re.sub(r"\s+\[-v\]", "", msg)
             msg = msg.replace(", --help", "        ")
             print(msg)
 
@@ -477,6 +566,11 @@ def main():
     )
 
     parser.add_argument(
+        '-d', '--debug', dest='debug', action='store_true',
+        help='print detailed debug trace to stderr'
+    )
+
+    parser.add_argument(
         '-r', '--reps', dest='reps', metavar='INT', type=int, default=DEFAULT_r,
         help=f'number of repetitions [{DEFAULT_r}]'
     )
@@ -505,7 +599,7 @@ def main():
 
     r = run_timing(
         log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
-        shell=args.shell, repetitions=args.reps
+        shell=args.shell, repetitions=args.reps, debug=args.debug
     )
 
     return r
