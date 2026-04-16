@@ -108,7 +108,7 @@ CLI
 
 .. code-block:: text
 
-     
+
     Program: galitime (benchmarking of computational experiments using GNU time)
     Version: 0.3.0
     Contact: Karel Brinda <karel.brinda@inria.fr>
@@ -144,6 +144,93 @@ Output columns
 9. ``status`` – run outcome: ``ok``, ``failed``, ``timeout``, or ``timing_error``
 10. ``exit_code`` – exit status of the benchmarked command; ``NA`` when unavailable
 11. ``command`` – normalized command string that was executed
+
+
+Comparison
+==========
+
+Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-dependent.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 12 16 22 14 18
+
+   * - Feature
+     - Galitime
+     - ``time``
+     - Snakemake ``benchmark``
+     - Hyperfine
+     - Profilers
+
+   * - Repeated runs
+     - ✅
+     - ❌
+     - ✅
+     - ✅
+     - ⚠️ manual
+
+   * - Structured output
+     - ✅ TSV
+     - ⚠️ limited/custom
+     - ✅ TSV/JSONL
+     - ✅
+     - ⚠️ tool-specific
+
+   * - Normalized columns
+     - ✅
+     - ❌
+     - ✅
+     - ✅
+     - ❌
+
+   * - Same output schema across machines
+     - ✅
+     - ⚠️ if pinned GNU ``time``; otherwise ❌
+     - ✅
+     - ✅
+     - ❌
+
+   * - CPU metrics
+     - ✅
+     - ✅
+     - ⚠️ platform/version-dependent
+     - ❌
+     - ⚠️ tool-dependent
+
+   * - Peak memory/RSS
+     - ✅
+     - ⚠️
+     - ⚠️ platform/version-dependent
+     - ❌
+     - ⚠️ profiling-specific
+
+   * - I/O statistics
+     - ✅
+     - ⚠️
+     - ⚠️ platform/version-dependent
+     - ❌
+     - ⚠️ limited/specific
+
+   * - Command labels
+     - ✅
+     - ❌
+     - ⚠️ via rule/extended metadata
+     - ✅
+     - ⚠️
+
+   * - Custom shell
+     - ✅
+     - ⚠️ manual wrapper
+     - ✅
+     - ✅
+     - ⚠️ manual wrapper
+
+   * - Statistical summaries
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ❌
 
 Development
 -----------
