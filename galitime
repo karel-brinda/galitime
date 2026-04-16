@@ -71,8 +71,8 @@ STATUS_TIMING_ERROR = "timing_error"
 # the integers being converted to int from str
 class TimingResult:
     PRINTED_COLUMNS = (
-        "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "max_ram_kb", "status",
-        "exit_code", "command"
+        "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct",
+        "max_ram_kb", "status", "exit_code", "command"
     )
 
     def __init__(self, experiment=None, run=None, command=None):
@@ -82,8 +82,8 @@ class TimingResult:
 
         # 1. prefill table with the mandatory fields in the right order
         mandatory_columns = (
-            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "max_ram_kb", "fs_inputs",
-            "fs_outputs", "status", "exit_code", "command"
+            "experiment", "run", "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct",
+            "max_ram_kb", "fs_inputs", "fs_outputs", "status", "exit_code", "command"
         )
         for x in mandatory_columns:
             self.add(x, NA_VALUE)
@@ -120,8 +120,14 @@ class TimingResult:
     def __repr__(self):
         return repr(self._data)
 
+    @staticmethod
+    def _format_printed_value(key, value):
+        if key == "cpu_pct" and value != NA_VALUE:
+            return f"{value}%"
+        return value
+
     def __str__(self):
-        printed_values = [self._data[k] for k in self.PRINTED_COLUMNS]
+        printed_values = [self._format_printed_value(k, self._data[k]) for k in self.PRINTED_COLUMNS]
         return "\t".join(self.PRINTED_COLUMNS) + "\n" + "\t".join(map(str, printed_values))
 
 
@@ -166,6 +172,7 @@ class AbstractTime(ABC):
                 self._execute_time()
                 self._parse_result()
                 self._set_cpu_time()
+                self._set_cpu_pct()
                 self._set_status()
             except Exception as err:
                 self.current_result.set("status", STATUS_TIMING_ERROR)
@@ -250,6 +257,14 @@ class AbstractTime(ABC):
         user_s = float(self.current_result["user_s"])
         sys_s = float(self.current_result["sys_s"])
         self.current_result.set("cpu_s", user_s + sys_s)
+
+    def _set_cpu_pct(self):
+        real_s = float(self.current_result["real_s"])
+        cpu_s = float(self.current_result["cpu_s"])
+        if real_s <= 0:
+            self.current_result.set("cpu_pct", None)
+        else:
+            self.current_result.set("cpu_pct", 100.0 * cpu_s / real_s)
 
     def _set_status(self):
         if self.current_result["status"] != NA_VALUE:
