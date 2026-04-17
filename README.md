@@ -97,7 +97,7 @@ Program: galitime (benchmarking of computational experiments using GNU time)
 Version: 0.4.0
 Contact: Karel Brinda <karel.brinda@inria.fr>
 
-usage: galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] [--] command [arg ...]
+usage: galitime [-d] [-r INT] [-g] [-l FILE] [-S FILE] [-n STR] [-s STR] [--] command [arg ...]
 
 command modes:
   argv-like mode:      galitime sleep 0.1
@@ -119,6 +119,7 @@ options:
   -r, --reps INT   number of repetitions [1]
   -g, --gtime      call gtime instead of time (useful on MacOS)
   -l, --log FILE   output (filename/stderr/stdout) [stderr]
+  -S, --stats FILE write summary statistics TSV to FILE [disabled]
   -n, --name STR   name of the experiment (for output)
   -s, --shell STR  shell for execution [/bin/bash]
 ```

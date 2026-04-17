@@ -504,6 +504,7 @@ def run_timing(
     gtime,
     repetitions,
     debug=False,
+    stats_file=None,
 ):
     """
     Run a benchmarking command and log the results.
@@ -525,6 +526,7 @@ def run_timing(
     log_debug(debug, f"shell: {shell!r}")
     log_debug(debug, f"repetitions: {repetitions}")
     log_debug(debug, f"log destination: {log_file!r}")
+    log_debug(debug, f"stats destination: {stats_file!r}")
     log_debug(debug, f"experiment name: {experiment!r}")
     log_debug(debug, f"platform: {platf}")
     # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
@@ -619,7 +621,7 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
         description="Program: {} ({})\n".format(PROGRAM, DESC) +
         "Version: {}\n".format(__version__) + "Contact: Karel Brinda <karel.brinda@inria.fr>",
-        usage="galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] [--] command [arg ...]",
+        usage="galitime [-d] [-r INT] [-g] [-l FILE] [-S FILE] [-n STR] [-s STR] [--] command [arg ...]",
         epilog=(
             "\n"
             "command modes:\n"
@@ -667,6 +669,11 @@ def main():
     )
 
     parser.add_argument(
+        '-S', '--stats', dest='stats', metavar='FILE', default=None,
+        help='write summary statistics TSV to FILE [disabled]'
+    )
+
+    parser.add_argument(
         '-n', '--name', metavar='STR', help='name of the experiment (for output)',
         dest='experiment', default=None
     )
@@ -682,6 +689,8 @@ def main():
         command_argv = args.command
     else:
         args = parser.parse_args(option_argv)
+    if args.stats in {"stdout", "stderr", "-"}:
+        parser.error("--stats requires a real file path")
     if not command_argv:
         parser.error("the following arguments are required: command")
     # The logged "command" field intentionally matches the exact string we execute:
@@ -693,6 +702,7 @@ def main():
 
     r = run_timing(
         log_file=args.log,
+        stats_file=args.stats,
         experiment=args.experiment,
         command=command,
         gtime=args.gtime,
