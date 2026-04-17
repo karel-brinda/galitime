@@ -40,6 +40,7 @@ import os
 import shlex
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -66,6 +67,20 @@ STATUS_OK = "ok"
 STATUS_FAILED = "failed"
 STATUS_TIMEOUT = "timeout"
 STATUS_TIMING_ERROR = "timing_error"
+STATS_COLUMNS = (
+    "experiment", "runs_requested", "runs_completed", "runs_summarized", "runs_ok",
+    "runs_failed", "runs_timeout", "runs_timing_error", "final_status", "final_exit_code",
+    "real_s_mean", "real_s_stddev", "real_s_min", "real_s_median", "real_s_max",
+    "user_s_mean", "user_s_stddev", "user_s_min", "user_s_median", "user_s_max",
+    "sys_s_mean", "sys_s_stddev", "sys_s_min", "sys_s_median", "sys_s_max",
+    "cpu_s_mean", "cpu_s_stddev", "cpu_s_min", "cpu_s_median", "cpu_s_max",
+    "cpu_pct_mean", "cpu_pct_stddev", "cpu_pct_min", "cpu_pct_median", "cpu_pct_max",
+    "max_ram_kb_mean", "max_ram_kb_stddev", "max_ram_kb_min", "max_ram_kb_median",
+    "max_ram_kb_max", "command"
+)
+STATS_NUMERIC_METRICS = (
+    "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct", "max_ram_kb"
+)
 
 
 def log_debug(enabled, message):
@@ -371,6 +386,58 @@ class AbstractTime(ABC):
                 seen.add(x)
                 unique_list.append(x)
         return "\n".join(unique_list)
+
+
+def _get_stats_value(results, key):
+    if not results:
+        return NA_VALUE
+    value = results[0][key]
+    return NA_VALUE if value == NA_VALUE else value
+
+
+def build_stats_row(timing, runs_requested):
+    results = timing.results
+    summarized_results = [result for result in results if result["status"] == STATUS_OK]
+    status_counts = collections.Counter(result["status"] for result in results)
+
+    row = collections.OrderedDict()
+    row["experiment"] = _get_stats_value(results, "experiment")
+    row["runs_requested"] = runs_requested
+    row["runs_completed"] = len(results)
+    row["runs_summarized"] = len(summarized_results)
+    row["runs_ok"] = status_counts.get(STATUS_OK, 0)
+    row["runs_failed"] = status_counts.get(STATUS_FAILED, 0)
+    row["runs_timeout"] = status_counts.get(STATUS_TIMEOUT, 0)
+    row["runs_timing_error"] = status_counts.get(STATUS_TIMING_ERROR, 0)
+    row["final_status"] = results[-1]["status"] if results else NA_VALUE
+    row["final_exit_code"] = timing.get_final_exit_code()
+
+    for metric in STATS_NUMERIC_METRICS:
+        values = [float(result[metric]) for result in summarized_results]
+        if not values:
+            row[f"{metric}_mean"] = NA_VALUE
+            row[f"{metric}_stddev"] = NA_VALUE
+            row[f"{metric}_min"] = NA_VALUE
+            row[f"{metric}_median"] = NA_VALUE
+            row[f"{metric}_max"] = NA_VALUE
+            continue
+        row[f"{metric}_mean"] = statistics.mean(values)
+        row[f"{metric}_stddev"] = statistics.stdev(values) if len(values) >= 2 else NA_VALUE
+        row[f"{metric}_min"] = min(values)
+        row[f"{metric}_median"] = statistics.median(values)
+        row[f"{metric}_max"] = max(values)
+
+    row["command"] = _get_stats_value(results, "command")
+
+    assert tuple(row.keys()) == STATS_COLUMNS
+    return row
+
+
+def render_stats_tsv(timing, runs_requested):
+    row = build_stats_row(timing=timing, runs_requested=runs_requested)
+    header = "\t".join(STATS_COLUMNS)
+    values = "\t".join(str(row[column]) for column in STATS_COLUMNS)
+    return header + "\n" + values
 
 
 def normalize_max_ram_kb(raw_value, raw_unit):
