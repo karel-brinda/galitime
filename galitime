@@ -628,6 +628,11 @@ def run_timing(
 
     t.run(times=repetitions)
 
+    if stats_file is not None:
+        Path(stats_file).parent.mkdir(parents=True, exist_ok=True)
+        with open(stats_file, "w") as fo:
+            print(render_stats_tsv(timing=t, runs_requested=repetitions), file=fo)
+
     log_debug(debug, f"output destination: {log_file!r}")
     if log_file == "stdout" or log_file == "-":
         print(t)
