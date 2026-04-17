@@ -7,7 +7,7 @@ SHELL := /usr/bin/env bash
 
 GALITIME := ../../galitime
 UNAME_S := $(shell uname -s)
-CHECK_STATS := /usr/bin/env python3 ./check_stats_tsv.py
+CHECK_STATS := ./check_stats_tsv.py
 EXPECTED_LOG_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
 
 GALITIME_RUN := $(GALITIME)
