@@ -44,6 +44,12 @@ Write the benchmark output to a file:
 galitime --log time.log "ls"
 ```
 
+Write per-run logs and a separate summary TSV in one invocation:
+
+```bash
+galitime -r 5 --log runs.tsv --stats stats.tsv "sleep 0.1"
+```
+
 Use GNU Time explicitly:
 
 ```bash
@@ -97,7 +103,7 @@ Program: galitime (benchmarking of computational experiments using GNU time)
 Version: 0.4.0
 Contact: Karel Brinda <karel.brinda@inria.fr>
 
-usage: galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] [--] command [arg ...]
+usage: galitime [-d] [-r INT] [-g] [-l FILE] [-S FILE] [-n STR] [-s STR] [--] command [arg ...]
 
 command modes:
   argv-like mode:      galitime sleep 0.1
@@ -110,17 +116,18 @@ notes:
   - argv-like mode is only guaranteed for POSIX-like shells
 
 positional arguments:
-  command          the command to be benchmarked
+  command           the command to be benchmarked
 
 options:
-  -h               show this help message and exit
-  -v               show program's version number and exit
-  -d, --debug      print detailed debug trace to stderr
-  -r, --reps INT   number of repetitions [1]
-  -g, --gtime      call gtime instead of time (useful on MacOS)
-  -l, --log FILE   output (filename/stderr/stdout) [stderr]
-  -n, --name STR   name of the experiment (for output)
-  -s, --shell STR  shell for execution [/bin/bash]
+  -h                show this help message and exit
+  -v                show program's version number and exit
+  -d, --debug       print detailed debug trace to stderr
+  -r, --reps INT    number of repetitions [1]
+  -g, --gtime       call gtime instead of time (useful on MacOS)
+  -l, --log FILE    output (filename/stderr/stdout) [stderr]
+  -S, --stats FILE  write summary statistics TSV to FILE [disabled]
+  -n, --name STR    name of the experiment (for output)
+  -s, --shell STR   shell for execution [/bin/bash]
 ```
 
 ## Command Modes
@@ -170,6 +177,16 @@ The argv-like convenience mode is supported for POSIX-like shells. If you set
 10. `exit_code` – exit status of the benchmarked command; `NA` when unavailable
 11. `command` – command string: the raw single-string shell command, or the argv-like tail reconstructed with `shlex.join(...)`
 
+## Stats file
+
+Use `-S/--stats` to write a separate vertical TSV file with one `field<TAB>value`
+entry per line for each `galitime` invocation.
+
+Numeric summaries are computed only from runs where `status=ok`. Count
+columns reflect all completed runs, including failures, timeouts, and timing
+errors. The `stddev` columns use sample standard deviation and are `NA`
+when fewer than 2 runs were summarized.
+
 # Comparison
 
 Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-dependent.
@@ -185,7 +202,7 @@ Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-d
 | I/O statistics | ✅ | ⚠️ | ⚠️ platform/version-dependent | ❌ | ⚠️ limited/specific |
 | Command labels | ✅ | ❌ | ⚠️ via rule/extended metadata | ✅ | ⚠️ |
 | Custom shell | ✅ | ⚠️ manual wrapper | ✅ | ✅ | ⚠️ manual wrapper |
-| Statistical summaries | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Statistical summaries | ✅ separate TSV | ❌ | ❌ | ✅ | ❌ |
 
 ## Development
 
