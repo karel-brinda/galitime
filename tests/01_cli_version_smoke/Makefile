@@ -31,9 +31,19 @@ test_copied_argv_mode:
 
 test_help_mentions_stats:
 	@echo "[4/4] CLI help mentions stats option"
-	@$(GALITIME) -h > help.txt
-	@grep -F -- "-S, --stats FILE" help.txt
-	@grep -F -- "write summary statistics TSV to FILE [disabled]" help.txt
+	@tmpfile=$$(mktemp); \
+	trap 'rm -f "$$tmpfile"' EXIT; \
+	$(GALITIME) -h > "$$tmpfile"; \
+	grep -Eq -- '^[[:space:]]*-S([[:space:]]+FILE)?,[[:space:]]+--stats FILE([[:space:]]|$$)' "$$tmpfile" || { \
+		echo "ERROR: help output is missing the --stats option synopsis"; \
+		cat "$$tmpfile"; \
+		exit 1; \
+	}; \
+	grep -Fq -- "write summary statistics TSV to FILE [disabled]" "$$tmpfile" || { \
+		echo "ERROR: help output is missing the --stats help text"; \
+		cat "$$tmpfile"; \
+		exit 1; \
+	}
 
 clean:
 	rm -f help.txt
