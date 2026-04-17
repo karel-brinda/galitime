@@ -71,22 +71,24 @@ def main():
     args = parser.parse_args()
 
     with open(args.path, newline="") as handle:
-        lines = handle.read().splitlines()
+        rows = list(csv.reader(handle, delimiter="\t"))
 
-    if len(lines) != 2:
-        die(f"{args.path}: expected exactly 2 lines, found {len(lines)}")
+    if len(rows) != len(EXPECTED_HEADER):
+        die(
+            f"{args.path}: expected exactly {len(EXPECTED_HEADER)} lines, found {len(rows)}"
+        )
 
-    rows = list(csv.reader(lines, delimiter="\t"))
-    if len(rows) != 2:
-        die(f"{args.path}: expected exactly 2 TSV rows, found {len(rows)}")
+    for i, row in enumerate(rows, start=1):
+        if len(row) != 2:
+            die(f"{args.path}: line {i} is not a 2-column TSV row: {row!r}")
 
-    header, data = rows
-    if args.expect_header and header != EXPECTED_HEADER:
-        die(f"{args.path}: unexpected header order: {header}")
-    if len(header) != len(data):
-        die(f"{args.path}: header/data column mismatch ({len(header)} != {len(data)})")
+    keys = [key for key, _ in rows]
+    if args.expect_header and keys != EXPECTED_HEADER:
+        die(f"{args.path}: unexpected key order: {keys}")
+    if len(set(keys)) != len(keys):
+        die(f"{args.path}: duplicate keys found: {keys}")
 
-    row = dict(zip(header, data))
+    row = dict(rows)
 
     for item in args.expect:
         if "=" not in item:

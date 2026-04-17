@@ -116,18 +116,18 @@ notes:
   - argv-like mode is only guaranteed for POSIX-like shells
 
 positional arguments:
-  command          the command to be benchmarked
+  command           the command to be benchmarked
 
 options:
-  -h               show this help message and exit
-  -v               show program's version number and exit
-  -d, --debug      print detailed debug trace to stderr
-  -r, --reps INT   number of repetitions [1]
-  -g, --gtime      call gtime instead of time (useful on MacOS)
-  -l, --log FILE   output (filename/stderr/stdout) [stderr]
-  -S, --stats FILE write summary statistics TSV to FILE [disabled]
-  -n, --name STR   name of the experiment (for output)
-  -s, --shell STR  shell for execution [/bin/bash]
+  -h                show this help message and exit
+  -v                show program's version number and exit
+  -d, --debug       print detailed debug trace to stderr
+  -r, --reps INT    number of repetitions [1]
+  -g, --gtime       call gtime instead of time (useful on MacOS)
+  -l, --log FILE    output (filename/stderr/stdout) [stderr]
+  -S, --stats FILE  write summary statistics TSV to FILE [disabled]
+  -n, --name STR    name of the experiment (for output)
+  -s, --shell STR   shell for execution [/bin/bash]
 ```
 
 ## Command Modes
@@ -179,8 +179,8 @@ The argv-like convenience mode is supported for POSIX-like shells. If you set
 
 ## Stats file
 
-Use `-S/--stats` to write a separate TSV file with one summary row per
-`galitime` invocation.
+Use `-S/--stats` to write a separate vertical TSV file with one `field<TAB>value`
+entry per line for each `galitime` invocation.
 
 Numeric summaries are computed only from runs where `status=ok`. Count
 columns reflect all completed runs, including failures, timeouts, and timing

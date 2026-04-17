@@ -445,9 +445,10 @@ def build_stats_row(timing, runs_requested):
 
 def render_stats_tsv(timing, runs_requested):
     row = build_stats_row(timing=timing, runs_requested=runs_requested)
-    header = "\t".join(STATS_COLUMNS)
-    values = "\t".join(str(row[column]) for column in STATS_COLUMNS)
-    return header + "\n" + values
+    return "\n".join(
+        f"{column}\t{row[column]}"
+        for column in STATS_COLUMNS
+    )
 
 
 def normalize_max_ram_kb(raw_value, raw_unit):
