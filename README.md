@@ -44,6 +44,12 @@ Write the benchmark output to a file:
 galitime --log time.log "ls"
 ```
 
+Write per-run logs and a separate summary TSV in one invocation:
+
+```bash
+galitime -r 5 --log runs.tsv --stats stats.tsv "sleep 0.1"
+```
+
 Use GNU Time explicitly:
 
 ```bash
@@ -171,6 +177,16 @@ The argv-like convenience mode is supported for POSIX-like shells. If you set
 10. `exit_code` – exit status of the benchmarked command; `NA` when unavailable
 11. `command` – command string: the raw single-string shell command, or the argv-like tail reconstructed with `shlex.join(...)`
 
+## Stats file
+
+Use `-S/--stats` to write a separate TSV file with one summary row per
+`galitime` invocation.
+
+Numeric summaries are computed only from runs where `status=ok`. Count
+columns reflect all completed runs, including failures, timeouts, and timing
+errors. The `stddev` columns use sample standard deviation and are `NA`
+when fewer than 2 runs were summarized.
+
 # Comparison
 
 Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-dependent.
@@ -186,7 +202,7 @@ Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-d
 | I/O statistics | ✅ | ⚠️ | ⚠️ platform/version-dependent | ❌ | ⚠️ limited/specific |
 | Command labels | ✅ | ❌ | ⚠️ via rule/extended metadata | ✅ | ⚠️ |
 | Custom shell | ✅ | ⚠️ manual wrapper | ✅ | ✅ | ⚠️ manual wrapper |
-| Statistical summaries | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Statistical summaries | ✅ separate TSV | ❌ | ❌ | ✅ | ❌ |
 
 ## Development
 
