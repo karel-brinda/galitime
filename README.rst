@@ -44,7 +44,13 @@ Benchmark a command and print the result to standard output:
 
 .. code-block:: bash
 
-    galitime -l stdout "sleep 0.1"
+    galitime -l stdout sleep 0.1
+
+Benchmark a raw shell command string when you need shell syntax:
+
+.. code-block:: bash
+
+    galitime -l stdout "echo a && echo b"
 
 Write the benchmark output to a file:
 
@@ -98,7 +104,7 @@ The top-level ``galitime`` file is the canonical standalone executable.
 .. code-block:: bash
 
     chmod +x ./galitime
-    ./galitime -l stdout "sleep 0.1"
+    ./galitime -l stdout sleep 0.1
 
 This is useful when copying a single executable into another repository,
 container image, or remote environment.
@@ -113,30 +119,61 @@ CLI
     Version: 0.4.0
     Contact: Karel Brinda <karel.brinda@inria.fr>
 
-    usage: galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] command
+    usage: galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] [--] command [arg ...]
+
+    command modes:
+      argv-like mode:      galitime sleep 0.1
+      shell-command mode:  galitime "echo a && echo b"
+
+    notes:
+      - use quotes when your command includes shell syntax such as: redirection ('>'),
+        pipelines ('|'), '&&', ';', globbing, or command substitution
+      - use -- to explicitely mark the start of the benchmarked command when needed
+      - argv-like mode is only guaranteed for POSIX-like shells
 
     positional arguments:
-      command              the command to be benchmarked
+      command          the command to be benchmarked
 
-    optional arguments:
-      -h                   show this help message and exit
-      -v                   show program's version number and exit
-      -d, --debug          print detailed debug trace to stderr
-      -r INT, --reps INT   number of repetitions [1]
-      -g, --gtime          call gtime instead of time (useful on MacOS)
-      -l FILE, --log FILE  output (filename/stderr/stdout) [stderr]
-      -n STR, --name STR   name of the experiment (for output)
-      -s STR, --shell STR  shell for execution [/bin/bash]
+    options:
+      -h               show this help message and exit
+      -v               show program's version number and exit
+      -d, --debug      print detailed debug trace to stderr
+      -r, --reps INT   number of repetitions [1]
+      -g, --gtime      call gtime instead of time (useful on MacOS)
+      -l, --log FILE   output (filename/stderr/stdout) [stderr]
+      -n, --name STR   name of the experiment (for output)
+      -s, --shell STR  shell for execution [/bin/bash]
+
+Command Modes
+-------------
+
+``galitime`` accepts commands in two explicit forms:
+
+* argv-like convenience mode for ordinary POSIX-like argv tails:
+
+  .. code-block:: bash
+
+      galitime sleep 0.1
+
+* raw shell-command mode for shell expressions and shell syntax:
+
+  .. code-block:: bash
+
+      galitime "echo a && echo b"
+
+Quotes are still required for shell syntax such as redirection, pipelines,
+``&&``, ``;``, globbing, and command substitution.
+
+``--`` the recommended escape hatch whenever there is any ambiguity,
+especially when the benchmarked command or one of its arguments begins with
+``-``:
 
 .. code-block:: bash
 
-    galitime --debug -l stdout "sleep 0.1"
+    galitime -- sleep 0.1
 
-Debug diagnostics are written to ``stderr`` with timestamped prefixes such as
-``[galitime 2026-04-16T15:55:56] ...``.
-
-When ``-l stderr`` is used, both the timing table and debug diagnostics are written to
-``stderr``, but debug lines remain easy to distinguish by the ``[galitime ...]`` prefix.
+The argv-like convenience mode is supported for POSIX-like shells. If you set
+``--shell`` to a non-POSIX shell, that reconstruction path is not guaranteed.
 
 Output columns
 --------------
@@ -154,7 +191,7 @@ Output columns
 8. ``max_ram_kb`` – maximum resident memory in decimal kilobytes (``1 KB = 1000 bytes``)
 9. ``status`` – run outcome: ``ok``, ``failed``, ``timeout``, or ``timing_error``
 10. ``exit_code`` – exit status of the benchmarked command; ``NA`` when unavailable
-11. ``command`` – normalized command string that was executed
+11. ``command`` – command string: the raw single-string shell command, or the argv-like tail reconstructed with ``shlex.join(...)``
 
 
 Comparison
