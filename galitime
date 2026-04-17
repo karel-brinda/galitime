@@ -77,6 +77,49 @@ def log_debug(enabled, message):
         print(f"{prefix} {message}", file=sys.stderr, flush=True)
 
 
+def split_cli_argv(parser, argv):
+    flag_options = set()
+    value_options = set()
+    long_value_options = set()
+    for action in parser._actions:
+        if not action.option_strings:
+            continue
+        if action.nargs == 0:
+            flag_options.update(action.option_strings)
+        else:
+            value_options.update(action.option_strings)
+            long_value_options.update(x for x in action.option_strings if x.startswith("--"))
+
+    option_argv = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--":
+            return option_argv, argv[i + 1:], False
+        if arg in flag_options:
+            option_argv.append(arg)
+            i += 1
+            continue
+        if arg in value_options:
+            option_argv.append(arg)
+            if i + 1 < len(argv):
+                option_argv.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
+            continue
+        if any(arg.startswith(f"{opt}=") for opt in long_value_options):
+            option_argv.append(arg)
+            i += 1
+            continue
+        if arg.startswith("-") and arg != "-":
+            # Hand ambiguous or unknown leading option-like tokens back to argparse
+            # so it can emit its normal diagnostics and handle its own accepted forms.
+            return None, None, True
+        return option_argv, argv[i:], False
+    return option_argv, [], False
+
+
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
 # the integers being converted to int from str
 class TimingResult:
@@ -148,7 +191,6 @@ class AbstractTime(ABC):
         self.experiment = experiment
         self.debug = debug
         self.command = command
-        self.command_simpl = " ".join(command.replace("\\\n", " ").strip().split())
         self.tmp_dir = tempfile.TemporaryDirectory()
         self._dlog(f"temporary directory: {self.tmp_dir.name!r}")
         self._dlog(f"time command: {self.time_command!r}")
@@ -181,7 +223,7 @@ class AbstractTime(ABC):
             run = self.current_i
             self._dlog(f"run {run}/{times}: starting")
             self.current_result = TimingResult(
-                experiment=self.experiment, run=run, command=self.command_simpl
+                experiment=self.experiment, run=run, command=self.command
             )
 
             try:
@@ -352,7 +394,11 @@ class GnuTime(AbstractTime):
         debug=False,
     ):
         super().__init__(
-            command=command, time=time, shell=shell, experiment=experiment, debug=debug
+            command=command,
+            time=time,
+            shell=shell,
+            experiment=experiment,
+            debug=debug,
         )
 
         self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
@@ -450,7 +496,15 @@ class MacTime(AbstractTime):
         #    self.current_result[k] = v
 
 
-def run_timing(log_file, command, shell, experiment, gtime, repetitions, debug=False):
+def run_timing(
+    log_file,
+    command,
+    shell,
+    experiment,
+    gtime,
+    repetitions,
+    debug=False,
+):
     """
     Run a benchmarking command and log the results.
 
@@ -486,10 +540,20 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions, debug=F
     else:
         if platf == "linux":
             log_debug(debug, "backend: GNU time via /usr/bin/env time on Linux")
-            t = GnuTime(command=command, experiment=experiment, shell=shell, debug=debug)
+            t = GnuTime(
+                command=command,
+                experiment=experiment,
+                shell=shell,
+                debug=debug,
+            )
         elif platf == "darwin":
             log_debug(debug, "backend: macOS /usr/bin/env time -l -p on Darwin")
-            t = MacTime(command=command, experiment=experiment, shell=shell, debug=debug)
+            t = MacTime(
+                command=command,
+                experiment=experiment,
+                shell=shell,
+                debug=debug,
+            )
         else:
             raise Exception(f"Unsupported OS ({platf})")
 
@@ -555,9 +619,26 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
         description="Program: {} ({})\n".format(PROGRAM, DESC) +
         "Version: {}\n".format(__version__) + "Contact: Karel Brinda <karel.brinda@inria.fr>",
+        usage="galitime [-d] [-r INT] [-g] [-l FILE] [-n STR] [-s STR] [--] command [arg ...]",
+        epilog=(
+            "\n"
+            "command modes:\n"
+            "  argv-like mode:      galitime sleep 0.1\n"
+            "  shell-command mode:  galitime \"echo a && echo b\"\n"
+            "\n"
+            "notes:\n"
+            "  - use quotes when your command includes shell syntax such as: redirection ('>'),\n"
+            "    pipelines ('|'), '&&', ';', globbing, or command substitution\n"
+            "  - use -- to explicitely mark the start of the benchmarked command when needed\n"
+            "  - argv-like mode is only guaranteed for POSIX-like shells"
+        ),
     )
 
-    parser.add_argument('command', help='the command to be benchmarked')
+    parser.add_argument(
+        'command',
+        nargs='*',
+        help='the command to be benchmarked',
+    )
 
     parser.add_argument(
         '-v',
@@ -595,11 +676,29 @@ def main():
         default=DEFAULT_s, dest='shell'
     )
 
-    args = parser.parse_args()
+    option_argv, command_argv, fallback_to_argparse = split_cli_argv(parser, sys.argv[1:])
+    if fallback_to_argparse:
+        args = parser.parse_args(sys.argv[1:])
+        command_argv = args.command
+    else:
+        args = parser.parse_args(option_argv)
+    if not command_argv:
+        parser.error("the following arguments are required: command")
+    # The logged "command" field intentionally matches the exact string we execute:
+    # a single token is preserved verbatim, otherwise the argv tail is rebuilt with shlex.join.
+    if len(command_argv) == 1:
+        command = command_argv[0]
+    else:
+        command = shlex.join(command_argv)
 
     r = run_timing(
-        log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
-        shell=args.shell, repetitions=args.reps, debug=args.debug
+        log_file=args.log,
+        experiment=args.experiment,
+        command=command,
+        gtime=args.gtime,
+        shell=args.shell,
+        repetitions=args.reps,
+        debug=args.debug,
     )
 
     return r
