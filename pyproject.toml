@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "galitime"
 dynamic = ["version"]
 description = "Software for benchmarking scientific software."
-readme = "README.rst"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.7"
 authors = [{ name = "Karel Brinda", email = "karel.brinda@inria.fr" }]
 license = { text = "MIT" }
