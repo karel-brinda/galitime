@@ -395,6 +395,16 @@ def _get_stats_value(results, key):
     return NA_VALUE if value == NA_VALUE else value
 
 
+def _get_numeric_stats_values(results, metric):
+    values = []
+    for result in results:
+        value = result[metric]
+        if value == NA_VALUE:
+            continue
+        values.append(float(value))
+    return values
+
+
 def build_stats_row(timing, runs_requested):
     results = timing.results
     summarized_results = [result for result in results if result["status"] == STATUS_OK]
@@ -413,7 +423,7 @@ def build_stats_row(timing, runs_requested):
     row["final_exit_code"] = timing.get_final_exit_code()
 
     for metric in STATS_NUMERIC_METRICS:
-        values = [float(result[metric]) for result in summarized_results]
+        values = _get_numeric_stats_values(summarized_results, metric)
         if not values:
             row[f"{metric}_mean"] = NA_VALUE
             row[f"{metric}_stddev"] = NA_VALUE
