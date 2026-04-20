@@ -1,6 +1,7 @@
 # galitime
 
 [![Project Info](https://img.shields.io/badge/Project-Info-blue)](https://github.com/karel-brinda/galitime)
+[![Standalone CPython](https://img.shields.io/badge/standalone%20CPython-3.8%20%E2%80%93%203.14-blue)](https://github.com/karel-brinda/galitime)
 [![GitHub release](https://img.shields.io/github/release/karel-brinda/galitime.svg)](https://github.com/karel-brinda/galitime/releases/)
 [![PyPI](https://img.shields.io/pypi/v/galitime.svg)](https://pypi.org/project/galitime/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10953105.svg)](https://doi.org/10.5281/zenodo.10953105)
@@ -60,7 +61,7 @@ galitime --gtime -l stdout "sleep 0.1"
 
 ### Requirements
 
-* Python 3.7 or newer
+* Python 3.8+
 * A working `time` command on the host system
 
 On macOS, you can optionally install GNU Time with Homebrew:
@@ -87,6 +88,8 @@ pip install -U galitime
 ## Standalone usage
 
 The top-level `galitime` file is the canonical standalone executable.
+Official standalone support is Linux and macOS on CPython 3.8-3.14.
+Windows is not supported for standalone use.
 
 ```bash
 chmod +x ./galitime
