@@ -1,4 +1,7 @@
 `gtime` uses the same output mapping as `gnu`, so it is omitted here.
+The normalized cross-platform mapping below is intended to keep output field
+names and intended semantics consistent across backends, not to claim exact
+kernel-level equivalence between GNU and BSD/macOS counters.
 
 | TSV column / feature | gnu<sup><a href="#cmd-a">a</a></sup> | bsd<sup><a href="#cmd-b">b</a></sup> |
 |---|---|---|
@@ -15,7 +18,7 @@
 | `fs_input_ops` | `%I` | `block input operations` |
 | `fs_output_ops` | `%O` | `block output operations` |
 | `major_page_faults` | `%F` | `page faults` |
-| `minor_page_faults` | `%R` | `page reclaims` |
+| `minor_page_faults` | `%R` | `page reclaims` (BSD/macOS label mapped to the normalized cross-platform field name) |
 | `swaps` | `%W` | `swaps` |
 | * `status` | derived from `exit_code` | derived from `exit_code` |
 | * `exit_code` | shell `EXIT` trap | shell `EXIT` trap |

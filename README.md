@@ -195,8 +195,10 @@ experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	backend	fs_input_ops
 `cpu_pct` is derived by `galitime` from `real_s`, `user_s`, and `sys_s`,
 not taken from the backend `time` command output.
 
-`fs_input_ops` and `fs_output_ops` are OS-reported filesystem operation
-counters. They are not byte counts and they are not file counts.
+`fs_input_ops` and `fs_output_ops` are counts of OS-reported filesystem I/O
+operations. They are not bytes read or written, and they are not file counts.
+`minor_page_faults` is the normalized cross-platform output name; on
+BSD/macOS, it corresponds to `page reclaims`.
 These values may vary across operating systems and kernel implementations, so
 they should be treated as operational diagnostics rather than universal
 algorithmic metrics.
@@ -229,7 +231,7 @@ See [feature mapping](feature_mapping.md) for a more detailed breakdown.
 | Same output schema across machines | ✅ | ⚠️ if pinned GNU `time`; otherwise ❌ | ✅ | ✅ | ❌ |
 | CPU metrics | ✅ | ✅ | ⚠️ platform/version-dependent | ❌ | ⚠️ tool-dependent |
 | Peak memory/RSS | ✅ | ⚠️ | ⚠️ platform/version-dependent | ❌ | ⚠️ profiling-specific |
-| I/O statistics | ✅ | ⚠️ | ⚠️ platform/version-dependent | ❌ | ⚠️ limited/specific |
+| I/O statistics | ✅ with `-E/--extended` | ⚠️ | ⚠️ platform/version-dependent | ❌ | ⚠️ limited/specific |
 | Command labels | ✅ | ❌ | ⚠️ via rule/extended metadata | ✅ | ⚠️ |
 | Custom shell | ✅ | ⚠️ manual wrapper | ✅ | ✅ | ⚠️ manual wrapper |
 | Statistical summaries | ✅ separate TSV | ❌ | ❌ | ✅ | ❌ |
