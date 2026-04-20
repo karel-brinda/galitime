@@ -2,7 +2,7 @@
 	test_file_log test_stderr_default test_stdout_log test_repeat \
 	test_argv_sleep test_argv_double_dash test_single_string_mode \
 	test_space_argument test_hyphen_argument test_quoted_shell_expression \
-	test_literal_metacharacters test_unknown_option_error \
+	test_literal_metacharacters test_pipefail_failure test_unknown_option_error \
 	test_gtime_stdout_log test_gtime_file_log test_extended_stdout_log \
 	test_extended_defaults_na test_cpu_recompute test_gtime_extended_stdout_log
 
@@ -24,11 +24,12 @@ BASE_TARGETS := \
 	test_hyphen_argument \
 	test_quoted_shell_expression \
 	test_literal_metacharacters \
+	test_pipefail_failure \
 	test_unknown_option_error \
 	test_extended_stdout_log \
 	test_extended_defaults_na \
 	test_cpu_recompute
-TOTAL_STEPS := 12
+TOTAL_STEPS := 13
 EXPECTED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
 CHECK_COMMAND := /usr/bin/env python3 ./check_tsv_command.py
 CHECK_EXTENDED_COMMAND := /usr/bin/env python3 ./check_extended_tsv.py
@@ -90,6 +91,44 @@ define ASSERT_TSV_OK
 				exit 1; \
 			} \
 		}' "$(1)"
+endef
+
+define ASSERT_TSV_FAILED
+	@test -s "$(1)" || { \
+		echo "ERROR: $(1) is missing or empty"; \
+		exit 1; \
+	}
+	@awk -F '\t' '\
+	NR == 1 { \
+		if ($$0 != "$(EXPECTED_HEADER)") { \
+			print "ERROR: unexpected header in $(1): " $$0; \
+			exit 1; \
+		} \
+		for (i = 1; i <= NF; i++) if ($$i == "status") st = i; \
+		for (i = 1; i <= NF; i++) if ($$i == "exit_code") ec = i; \
+		if (!st || !ec) { \
+			print "ERROR: missing status or exit_code column in $(1)"; \
+			exit 1; \
+		} \
+		next; \
+	} \
+	NR > 1 { \
+		if ($$st != "failed") { \
+			print "ERROR: expected failed status in $(1): " $$0; \
+			exit 1; \
+		} \
+		if ($$ec != 1) { \
+			print "ERROR: expected exit_code=1 in $(1): " $$0; \
+			exit 1; \
+		} \
+		rows++; \
+	} \
+	END { \
+		if (rows != 1) { \
+			print "ERROR: expected exactly one data row in $(1), got " rows; \
+			exit 1; \
+		} \
+	}' "$(1)"
 endef
 
 define ASSERT_GTIME_AVAILABLE
@@ -176,8 +215,18 @@ test_literal_metacharacters:
 		exit 1; \
 	}
 
+test_pipefail_failure:
+	@echo "[12/$(TOTAL_STEPS)] Pipefail failure propagation test"
+	@rc=0; \
+	bash -o pipefail -c '$(GALITIME) --log time_pipefail.log "false | true"' >/dev/null 2>time_pipefail.err || rc=$$?; \
+	if [ "$$rc" -ne 1 ]; then \
+		echo "ERROR: expected galitime to exit with status 1 under pipefail, got $$rc"; \
+		exit 1; \
+	fi
+	$(call ASSERT_TSV_FAILED,time_pipefail.log)
+
 test_unknown_option_error:
-	@echo "[12/$(TOTAL_STEPS)] Unknown galitime option error test"
+	@echo "[13/$(TOTAL_STEPS)] Unknown galitime option error test"
 	@! $(GALITIME) -x true > unknown_option.out 2> unknown_option.err
 	@grep -q 'unrecognized arguments: -x' unknown_option.err
 	@test ! -s unknown_option.out
