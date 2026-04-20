@@ -1,3 +1,5 @@
+# Galitime – time feature mapping
+
 `gtime` uses the same output mapping as `gnu`, so it is omitted here.
 The normalized cross-platform mapping below is intended to keep output field
 names and intended semantics consistent across backends, not to claim exact
