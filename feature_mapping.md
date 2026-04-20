@@ -21,6 +21,7 @@
 | * `exit_code` | shell `EXIT` trap | shell `EXIT` trap | shell `EXIT` trap |
 | * `command` | galitime logged command string | galitime logged command string | galitime logged command string |
 
-[^a]: `/usr/bin/env time -o <tmp> -f "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W" <shell> -c <command_script>`
-[^b]: `/usr/bin/env gtime -o <tmp> -f "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W" <shell> -c <command_script>`
-[^c]: `/usr/bin/env time -o <tmp> -l -p <shell> -c <command_script>`
+<sup>a</sup>: `/usr/bin/env time -o <tmp> -f "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W" <shell> -c <command_script>`
+<sup>b</sup>: `/usr/bin/env gtime -o <tmp> -f "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W" <shell> -c <command_script>`
+<sup>c</sup>: `/usr/bin/env time -o <tmp> -l -p <shell> -c <command_script>`
+
