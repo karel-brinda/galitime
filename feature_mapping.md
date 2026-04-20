@@ -25,13 +25,17 @@ kernel-level equivalence between GNU and BSD/macOS counters.
 | * `command` | galitime logged command string | galitime logged command string |
 
 <a id="cmd-a"></a>
-**a:**
+**a: GNU time**
+* Command: `/usr/bin/env time` (on Linux) or `gtime` (on Mac)
+* Params:
 ```bash
-/usr/bin/env time -o <tmp> -f "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W" <shell> -c <command_script>
+-o <tmp> -f "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W" <shell> -c <command_script>
 ```
 
 <a id="cmd-b"></a>
-**b:**
+**b: BSD time**
+* Command: `/usr/bin/env time` (on Mac)
+* Params:
 ```bash
-/usr/bin/env time -o <tmp> -l -p <shell> -c <command_script>
+-o <tmp> -l -p <shell> -c <command_script>
 ```
