@@ -7,6 +7,12 @@ GALITIME := ../../galitime
 SMALL_MIB := 64
 LARGE_MIB := 192
 GTIME_AVAILABLE := $(shell command -v gtime >/dev/null 2>&1 && echo yes)
+UNAME_S := $(shell uname -s)
+DEFAULT_BACKEND_NAME := gnu
+
+ifeq ($(UNAME_S),Darwin)
+DEFAULT_BACKEND_NAME := bsd
+endif
 
 TEST_TARGETS := test_default_backend
 TOTAL_STEPS := 1
@@ -27,7 +33,7 @@ test_default_backend:
 		--large default_large.tsv \
 		--small-mib $(SMALL_MIB) \
 		--large-mib $(LARGE_MIB) \
-		--backend default
+		--backend $(DEFAULT_BACKEND_NAME)
 
 test_gtime_backend:
 	@echo "[2/$(TOTAL_STEPS)] GNU time memory-unit normalization"
