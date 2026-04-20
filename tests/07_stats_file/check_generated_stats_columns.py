@@ -48,8 +48,8 @@ def main():
         "max_ram_kb",
     )
     expected_extended_metrics = expected_base_metrics + (
-        "fs_inputs",
-        "fs_outputs",
+        "fs_input_ops",
+        "fs_output_ops",
         "major_page_faults",
         "minor_page_faults",
         "swaps",

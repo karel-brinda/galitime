@@ -12,8 +12,8 @@
 | * `cpu_pct` | `100 * cpu_s / real_s` | `100 * cpu_s / real_s` |
 | * `max_ram_kb` | `%M` – normalized from KiB to kB | `maximum resident set size` – normalized from bytes to kB |
 | `backend` | `"gnu"` | `"bsd"` |
-| `fs_inputs` | `%I` | `block input operations` |
-| `fs_outputs` | `%O` | `block output operations` |
+| `fs_input_ops` | `%I` | `block input operations` |
+| `fs_output_ops` | `%O` | `block output operations` |
 | `major_page_faults` | `%F` | `page faults` |
 | `minor_page_faults` | `%R` | `page reclaims` |
 | `swaps` | `%W` | `swaps` |

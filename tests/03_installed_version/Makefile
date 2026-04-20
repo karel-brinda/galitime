@@ -12,10 +12,10 @@ PIP := $(VENV)/bin/python -m pip
 GALITIME := $(VENV)/bin/galitime
 VERSION_RE := ^galitime [0-9]+(\.[0-9]+)+([A-Za-z0-9._+-]*)$$
 EXPECTED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
-EXPECTED_EXTENDED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	backend	fs_inputs	fs_outputs	major_page_faults	minor_page_faults	swaps	status	exit_code	command
+EXPECTED_EXTENDED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	backend	fs_input_ops	fs_output_ops	major_page_faults	minor_page_faults	swaps	status	exit_code	command
 CHECK_EXTENDED_COMMAND := /usr/bin/env python3 ../02_simple_tests/check_extended_tsv.py
 EXTENDED_BACKEND := gnu
-EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_inputs --expect-not-na fs_outputs --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
+EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_input_ops --expect-not-na fs_output_ops --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)

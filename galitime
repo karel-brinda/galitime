@@ -93,8 +93,8 @@ EXTENDED_COLUMNS = (
     "cpu_pct",
     "max_ram_kb",
     "backend",
-    "fs_inputs",
-    "fs_outputs",
+    "fs_input_ops",
+    "fs_output_ops",
     "major_page_faults",
     "minor_page_faults",
     "swaps",
@@ -108,7 +108,7 @@ BASE_STATS_NUMERIC_METRICS = (
     "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct", "max_ram_kb"
 )
 EXTENDED_STATS_NUMERIC_METRICS = BASE_STATS_NUMERIC_METRICS + (
-    "fs_inputs", "fs_outputs", "major_page_faults", "minor_page_faults", "swaps"
+    "fs_input_ops", "fs_output_ops", "major_page_faults", "minor_page_faults", "swaps"
 )
 STATS_PREFIX_COLUMNS = (
     "experiment",
@@ -552,8 +552,8 @@ class GnuTime(AbstractTime):
             "sys_s",
             "percent_cpu",
             "max_ram_kb",
-            "fs_inputs",
-            "fs_outputs",
+            "fs_input_ops",
+            "fs_output_ops",
             "major_page_faults",
             "minor_page_faults",
             "swaps",
@@ -639,8 +639,8 @@ class MacTime(AbstractTime):
             ("real", "real_s"),
             ("user", "user_s"),
             ("sys", "sys_s"),
-            ("block input operations", "fs_inputs"),
-            ("block output operations", "fs_outputs"),
+            ("block input operations", "fs_input_ops"),
+            ("block output operations", "fs_output_ops"),
             ("page faults", "major_page_faults"),
             ("page reclaims", "minor_page_faults"),
             ("swaps", "swaps"),
@@ -649,6 +649,12 @@ class MacTime(AbstractTime):
                 self.current_result.set(target_key, d[source_key])
 
         if "maximum resident set size" in d:
+            # Empirically, the current Darwin `time -l -p` backend reports
+            # "maximum resident set size" in bytes here. tests/05_memory_units
+            # lock in the observed runtime behavior by checking that galitime's
+            # normalized max_ram_kb tracks allocated-byte deltas on the default
+            # backend. If Darwin changes the emitted unit, this conversion and
+            # that test should be updated together.
             normalized_max_ram_kb = normalize_max_ram_kb(
                 raw_value=d["maximum resident set size"], raw_unit="bytes"
             )

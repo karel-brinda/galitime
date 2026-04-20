@@ -54,8 +54,8 @@ def main():
 
     for key in (
         "backend",
-        "fs_inputs",
-        "fs_outputs",
+        "fs_input_ops",
+        "fs_output_ops",
         "major_page_faults",
         "minor_page_faults",
         "swaps",

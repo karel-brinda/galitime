@@ -36,8 +36,8 @@ CHECK_DEFAULTS_COMMAND := /usr/bin/env python3 ./check_timing_result_defaults.py
 CHECK_CPU_RECOMPUTE_COMMAND := /usr/bin/env python3 ./check_cpu_recompute.py
 EXTENDED_BACKEND := gnu
 EXTENDED_GTIME_BACKEND := gtime
-EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_inputs --expect-not-na fs_outputs --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
-GTIME_EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_inputs --expect-not-na fs_outputs --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
+EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_input_ops --expect-not-na fs_output_ops --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
+GTIME_EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_input_ops --expect-not-na fs_output_ops --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
 
 ifeq ($(UNAME_S),Darwin)
 EXTENDED_BACKEND := bsd

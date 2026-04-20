@@ -178,16 +178,28 @@ The argv-like convenience mode is supported for POSIX-like shells. If you set
 10. `exit_code` – exit status of the benchmarked command; `NA` when unavailable
 11. `command` – command string: the raw single-string shell command, or the argv-like tail reconstructed with `shlex.join(...)`
 
+Compact header:
+
+```text
+experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
+```
+
 With `-E/--extended`, `galitime` uses the same schema order on all supported
 backends (`gnu`, `gtime`, and `bsd`), and unavailable values are printed as
 `NA`:
 
 ```text
-experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	backend	fs_inputs	fs_outputs	major_page_faults	minor_page_faults	swaps	status	exit_code	command
+experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	backend	fs_input_ops	fs_output_ops	major_page_faults	minor_page_faults	swaps	status	exit_code	command
 ```
 
 `cpu_pct` is derived by `galitime` from `real_s`, `user_s`, and `sys_s`,
 not taken from the backend `time` command output.
+
+`fs_input_ops` and `fs_output_ops` are OS-reported filesystem operation
+counters. They are not byte counts and they are not file counts.
+These values may vary across operating systems and kernel implementations, so
+they should be treated as operational diagnostics rather than universal
+algorithmic metrics.
 
 ## Stats file
 
@@ -200,8 +212,8 @@ errors. The `stddev` columns use sample standard deviation and are `NA`
 when fewer than 2 runs were summarized.
 
 With `-E/--extended`, the stats file appends summary columns for
-`fs_inputs`, `fs_outputs`, `major_page_faults`, `minor_page_faults`, and
-`swaps`.
+`fs_input_ops`, `fs_output_ops`, `major_page_faults`, `minor_page_faults`,
+and `swaps`.
 
 # Comparison
 
