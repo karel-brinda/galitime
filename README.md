@@ -103,7 +103,7 @@ Program: galitime (benchmarking of computational experiments using GNU time)
 Version: 0.4.0
 Contact: Karel Brinda <karel.brinda@inria.fr>
 
-usage: galitime [-d] [-r INT] [-g] [-l FILE] [-S FILE] [-n STR] [-s STR] [--] command [arg ...]
+usage: galitime [-d] [-r INT] [-g] [-E] [-l FILE] [-S FILE] [-n STR] [-s STR] [--] command [arg ...]
 
 command modes:
   argv-like mode:      galitime sleep 0.1
@@ -124,6 +124,7 @@ options:
   -d, --debug       print detailed debug trace to stderr
   -r, --reps INT    number of repetitions [1]
   -g, --gtime       call gtime instead of time (useful on MacOS)
+  -E, --extended    print extended output schema
   -l, --log FILE    output (filename/stderr/stdout) [stderr]
   -S, --stats FILE  write summary statistics TSV to FILE [disabled]
   -n, --name STR    name of the experiment (for output)
@@ -177,6 +178,17 @@ The argv-like convenience mode is supported for POSIX-like shells. If you set
 10. `exit_code` – exit status of the benchmarked command; `NA` when unavailable
 11. `command` – command string: the raw single-string shell command, or the argv-like tail reconstructed with `shlex.join(...)`
 
+With `-E/--extended`, `galitime` uses the same schema order on all supported
+backends (`gnu`, `gtime`, and `bsd`), and unavailable values are printed as
+`NA`:
+
+```text
+experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	backend	fs_inputs	fs_outputs	major_page_faults	minor_page_faults	swaps	status	exit_code	command
+```
+
+`cpu_pct` is derived by `galitime` from `real_s`, `user_s`, and `sys_s`,
+not taken from the backend `time` command output.
+
 ## Stats file
 
 Use `-S/--stats` to write a separate vertical TSV file with one `field<TAB>value`
@@ -186,6 +198,10 @@ Numeric summaries are computed only from runs where `status=ok`. Count
 columns reflect all completed runs, including failures, timeouts, and timing
 errors. The `stddev` columns use sample standard deviation and are `NA`
 when fewer than 2 runs were summarized.
+
+With `-E/--extended`, the stats file appends summary columns for
+`fs_inputs`, `fs_outputs`, `major_page_faults`, `minor_page_faults`, and
+`swaps`.
 
 # Comparison
 
