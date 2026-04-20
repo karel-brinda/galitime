@@ -207,6 +207,8 @@ With `-E/--extended`, the stats file appends summary columns for
 
 Legend: ✅ yes; ❌ no; ⚠️ partial, indirect, platform-dependent, or tool-dependent.
 
+See [feature mapping](feature_mapping.md) for a more detailed breakdown.
+
 | Feature | Galitime | `time` | Snakemake `benchmark` | Hyperfine | Profilers |
 |---|---|---|---|---|---|
 | Repeated runs | ✅ | ❌ | ✅ | ✅ | ⚠️ manual |
