@@ -3,7 +3,8 @@
 	test_argv_sleep test_argv_double_dash test_single_string_mode \
 	test_space_argument test_hyphen_argument test_quoted_shell_expression \
 	test_literal_metacharacters test_unknown_option_error \
-	test_gtime_stdout_log test_gtime_file_log
+	test_gtime_stdout_log test_gtime_file_log test_extended_stdout_log \
+	test_extended_defaults_na test_cpu_recompute test_gtime_extended_stdout_log
 
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eo pipefail -c
@@ -23,14 +24,32 @@ BASE_TARGETS := \
 	test_hyphen_argument \
 	test_quoted_shell_expression \
 	test_literal_metacharacters \
-	test_unknown_option_error
+	test_unknown_option_error \
+	test_extended_stdout_log \
+	test_extended_defaults_na \
+	test_cpu_recompute
 TOTAL_STEPS := 12
 EXPECTED_HEADER := experiment	run	real_s	user_s	sys_s	cpu_s	cpu_pct	max_ram_kb	status	exit_code	command
 CHECK_COMMAND := /usr/bin/env python3 ./check_tsv_command.py
+CHECK_EXTENDED_COMMAND := /usr/bin/env python3 ./check_extended_tsv.py
+CHECK_DEFAULTS_COMMAND := /usr/bin/env python3 ./check_timing_result_defaults.py
+CHECK_CPU_RECOMPUTE_COMMAND := /usr/bin/env python3 ./check_cpu_recompute.py
+EXTENDED_BACKEND := gnu
+EXTENDED_GTIME_BACKEND := gtime
+EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_inputs --expect-not-na fs_outputs --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
+GTIME_EXTENDED_NOT_NA_ASSERTS := --expect-not-na fs_inputs --expect-not-na fs_outputs --expect-not-na major_page_faults --expect-not-na minor_page_faults --expect-not-na swaps
+
+ifeq ($(UNAME_S),Darwin)
+EXTENDED_BACKEND := bsd
+EXTENDED_NOT_NA_ASSERTS :=
+endif
 
 ifeq ($(UNAME_S),Darwin)
 BASE_TARGETS += test_gtime_stdout_log test_gtime_file_log
-TOTAL_STEPS := 14
+BASE_TARGETS += test_gtime_extended_stdout_log
+TOTAL_STEPS := 18
+else
+TOTAL_STEPS := 15
 endif
 
 all: $(BASE_TARGETS)
@@ -163,17 +182,46 @@ test_unknown_option_error:
 	@grep -q 'unrecognized arguments: -x' unknown_option.err
 	@test ! -s unknown_option.out
 
+test_extended_stdout_log:
+	@echo "[13/$(TOTAL_STEPS)] Extended output schema test"
+	@$(GALITIME) -E --log stdout true > time_extended.log
+	$(call CHECK_EXTENDED_COMMAND) time_extended.log \
+		--expect-header \
+		--expect backend=$(EXTENDED_BACKEND) \
+		--expect status=ok \
+		--expect exit_code=0 \
+		--expect command=true $(EXTENDED_NOT_NA_ASSERTS)
+
+test_extended_defaults_na:
+	@echo "[14/$(TOTAL_STEPS)] Extended fields default to NA when unset"
+	@$(CHECK_DEFAULTS_COMMAND)
+
+test_cpu_recompute:
+	@echo "[15/$(TOTAL_STEPS)] CPU totals and percentages are recomputed centrally"
+	@$(CHECK_CPU_RECOMPUTE_COMMAND)
+
 test_gtime_stdout_log:
-	@echo "[13/$(TOTAL_STEPS)] macOS GNU time stdout log test"
+	@echo "[16/$(TOTAL_STEPS)] macOS GNU time stdout log test"
 	$(call ASSERT_GTIME_AVAILABLE)
 	@$(GALITIME) --gtime --log stdout true > time_gtime_stdout.log
 	$(call ASSERT_TSV_OK,time_gtime_stdout.log)
 
 test_gtime_file_log:
-	@echo "[14/$(TOTAL_STEPS)] macOS GNU time file log test"
+	@echo "[17/$(TOTAL_STEPS)] macOS GNU time file log test"
 	$(call ASSERT_GTIME_AVAILABLE)
 	@$(GALITIME) --gtime --log time_gtime.log true
 	$(call ASSERT_TSV_OK,time_gtime.log)
+
+test_gtime_extended_stdout_log:
+	@echo "[18/$(TOTAL_STEPS)] macOS GNU time extended output schema test"
+	$(call ASSERT_GTIME_AVAILABLE)
+	@$(GALITIME) --gtime -E --log stdout true > time_gtime_extended.log
+	$(call CHECK_EXTENDED_COMMAND) time_gtime_extended.log \
+		--expect-header \
+		--expect backend=$(EXTENDED_GTIME_BACKEND) \
+		--expect status=ok \
+		--expect exit_code=0 \
+		--expect command=true $(GTIME_EXTENDED_NOT_NA_ASSERTS)
 
 clean:
 	rm -f *.log *.out *.err *.expected
