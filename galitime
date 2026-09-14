@@ -602,7 +602,7 @@ class MacTime(AbstractTime):
     def __init__(self, command, shell, experiment=None, extended=False, backend_name=BACKEND_BSD, debug=False):
         super().__init__(
             command=command,
-            time="/usr/bin/env time",
+            time="/usr/bin/time",
             shell=shell,
             experiment=experiment,
             extended=extended,
@@ -726,7 +726,7 @@ def run_timing(
                 debug=debug,
             )
         elif platf == "darwin":
-            log_debug(debug, "backend: macOS /usr/bin/env time -l -p on Darwin")
+            log_debug(debug, "backend: macOS /usr/bin/time -l -p on Darwin")
             t = MacTime(
                 command=command,
                 experiment=experiment,
